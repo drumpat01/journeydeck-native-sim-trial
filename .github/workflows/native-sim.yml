@@ -477,6 +477,25 @@ jobs:
               --assets-dest "$APP"
           fi
 
+          # The generic simulator build is intentionally unsigned, but
+          # JourneyDeck initializes CloudKit during startup. CloudKit traps when
+          # its entitlement is absent, even in Simulator. Ad-hoc sign the final
+          # bundle after refreshing JS so cached builds retain the entitlement.
+          cat > /tmp/journeydeck-simulator.entitlements <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>com.apple.developer.icloud-container-identifiers</key>
+            <array><string>iCloud.com.journeydeck.recorder</string></array>
+            <key>com.apple.developer.icloud-services</key>
+            <array><string>CloudKit</string></array>
+          </dict>
+          </plist>
+          PLIST
+          codesign --force --sign - --entitlements /tmp/journeydeck-simulator.entitlements "$APP"
+          codesign -d --entitlements :- "$APP"
+
           BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Info.plist")
           xcrun simctl install "$UDID" "$APP"
           LAUNCH_OUTPUT=$(xcrun simctl launch "$UDID" "$BUNDLE_ID")
