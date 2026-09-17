@@ -1,0 +1,96 @@
+{
+  "expo": {
+    "name": "JourneyDeck",
+    "slug": "journeydeck",
+    "owner": "journeydeck",
+    "version": "1.9.0",
+    "runtimeVersion": "1.9.0-build13",
+    "updates": {
+      "url": "https://u.expo.dev/ea19ed01-7b62-49e9-a9e3-8058f1e6cbd4",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "experiments": {
+      "reactCompiler": true
+    },
+    "scheme": "journeydeck-recorder",
+    "platforms": [
+      "ios"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "usesAppleSignIn": true,
+      "bundleIdentifier": "com.journeydeck.recorder",
+      "entitlements": {
+        "com.apple.developer.applesignin": [
+          "Default"
+        ],
+        "com.apple.developer.icloud-container-identifiers": [
+          "iCloud.com.journeydeck.recorder"
+        ],
+        "com.apple.developer.icloud-services": [
+          "CloudKit"
+        ],
+        "com.apple.developer.ubiquity-kvstore-identifier": "$(TeamIdentifierPrefix)$(CFBundleIdentifier)"
+      },
+      "infoPlist": {
+        "NSAppleMusicUsageDescription": "JourneyDeck reads your Apple Music activity to build the soundtrack for journeys you record.",
+        "NSMicrophoneUsageDescription": "When you tap Identify Song, JourneyDeck briefly uses the microphone to recognize that song. Audio is never recorded or saved."
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "JourneyDeck uses your location to record the route of a journey you start.",
+          "locationAlwaysAndWhenInUsePermission": "JourneyDeck records your route while your phone is locked or another app is open.",
+          "isIosBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "JourneyDeck accesses photos you choose so you can add them to Collections and Memories.",
+          "cameraPermission": false,
+          "microphonePermission": "When you tap Identify Song, JourneyDeck briefly uses the microphone to recognize that song. Audio is never recorded or saved."
+        }
+      ],
+      "expo-sqlite",
+      "expo-secure-store",
+      "expo-image",
+      "expo-splash-screen",
+      "@maplibre/maplibre-react-native",
+      "expo-apple-authentication"
+    ],
+    "extra": {
+      "release": {
+        "label": "Native Runtime 1.9 — Build 13 observability",
+        "sequence": "N1.9-B13"
+      },
+      "edge": {
+        "url": "https://journeydeck-edge.patrickbstewart.workers.dev"
+      },
+      "eas": {
+        "projectId": "ea19ed01-7b62-49e9-a9e3-8058f1e6cbd4"
+      }
+    }
+  }
+}

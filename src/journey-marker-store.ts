@@ -1,0 +1,13 @@
+import { MARKER_OTA_COMPAT } from './journey-marker-compatibility';
+import * as sql from './journey-marker-sql-store';
+import * as compat from './journey-marker-compat-store';
+export type { JourneyMarker, MarkerMedia } from './journey-marker-sql-store';
+export const listMarkerJourneys = MARKER_OTA_COMPAT ? compat.listMarkerJourneys : sql.listMarkerJourneys;
+export const listJourneyMarkers = MARKER_OTA_COMPAT ? compat.listJourneyMarkers : sql.listJourneyMarkers;
+export const listSessionMarkers = MARKER_OTA_COMPAT ? compat.listSessionMarkers : sql.listSessionMarkers;
+export const saveMarkerNotes = MARKER_OTA_COMPAT ? compat.saveMarkerNotes : sql.saveMarkerNotes;
+export const listMarkerMedia = MARKER_OTA_COMPAT ? compat.listMarkerMedia : sql.listMarkerMedia;
+export const markerMediaUri = MARKER_OTA_COMPAT ? compat.markerMediaUri : sql.markerMediaUri;
+export const addMarkerMedia = MARKER_OTA_COMPAT ? compat.addMarkerMedia : sql.addMarkerMedia;
+export const removeMarkerMedia = MARKER_OTA_COMPAT ? compat.removeMarkerMedia : sql.removeMarkerMedia;
+export const deleteMarkerMediaForProfile = MARKER_OTA_COMPAT ? compat.deleteMarkerMediaForProfile : sql.deleteMarkerMediaForProfile;
