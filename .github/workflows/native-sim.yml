@@ -479,8 +479,22 @@ jobs:
 
           BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Info.plist")
           xcrun simctl install "$UDID" "$APP"
-          xcrun simctl launch "$UDID" "$BUNDLE_ID"
-          echo "Launched $BUNDLE_ID"
+          LAUNCH_OUTPUT=$(xcrun simctl launch "$UDID" "$BUNDLE_ID")
+          echo "$LAUNCH_OUTPUT"
+          APP_PID=$(printf '%s' "$LAUNCH_OUTPUT" | sed -E 's/.*: ([0-9]+)$/\1/')
+          sleep 12
+          if ! xcrun simctl spawn "$UDID" kill -0 "$APP_PID" 2>/dev/null; then
+            echo "::error::$BUNDLE_ID exited during startup (pid $APP_PID)"
+            echo "--- JourneyDeck simulator log ---"
+            xcrun simctl spawn "$UDID" log show --last 3m --style compact \
+              --predicate 'process == "JourneyDeckV3" OR process == "JourneyDeck" OR eventMessage CONTAINS[c] "com.journeydeck.recorder.v3"' \
+              || true
+            echo "--- Simulator crash reports ---"
+            find "$HOME/Library/Logs/DiagnosticReports" -type f -mmin -5 -maxdepth 2 -print \
+              -exec sh -c 'tail -200 "$1"' _ {} \; 2>/dev/null || true
+            exit 1
+          fi
+          echo "Launched $BUNDLE_ID as pid $APP_PID; process remained alive for 12 seconds"
 
       - name: Install prebuilt app
         timeout-minutes: 15
