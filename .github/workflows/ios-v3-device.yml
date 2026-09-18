@@ -62,7 +62,13 @@ jobs:
         run: |
           npm ci
           npm run typecheck
-          npm test
+          if [ "$MOBILE_DIR" = "." ]; then
+            # The public mobile snapshot has no sibling server/Cloudflare repository.
+            # Those three integration suites run in the complete primary checkout.
+            node -e "const fs=require('fs');const cp=require('child_process');const external=new Set(['cloudflare-workers.test.mts','overture-places.test.mts','public-release-integrity.test.mts']);const files=fs.readdirSync('tests').filter(f=>f.endsWith('.test.mts')&&!external.has(f)).map(f=>'tests/'+f);const result=cp.spawnSync(process.execPath,['--experimental-strip-types','--test',...files],{stdio:'inherit'});process.exit(result.status??1)"
+          else
+            npm test
+          fi
       - name: Generate full iOS and Watch projects
         working-directory: ${{ env.MOBILE_DIR }}
         run: |
