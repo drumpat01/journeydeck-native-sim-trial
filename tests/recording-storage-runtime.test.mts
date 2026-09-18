@@ -1,5 +1,5 @@
 import * as markerModel from '../src/journey-marker-model.ts';
-import { JOURNEY_MARKER_SCHEMA_SQL } from '../src/journey-marker-schema.ts';
+import { JOURNEY_MARKER_SCHEMA_SQL, JOURNEY_MARKER_SYNC_SCHEMA_SQL } from '../src/journey-marker-schema.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -24,6 +24,7 @@ function fixture() {
   database.exec(UNIFIED_DATABASE_SCHEMA_SQL.slice(UNIFIED_DATABASE_SCHEMA_SQL.indexOf('CREATE TABLE IF NOT EXISTS local_migration_state')));
   database.exec(RECORDER_DATABASE_HARDENING_SQL);
   database.exec(JOURNEY_MARKER_SCHEMA_SQL);
+  database.exec(JOURNEY_MARKER_SYNC_SCHEMA_SQL);
   const db = {
     execSync: (sql: string) => database.exec(sql),
     runSync: (sql: string, ...params: any[]) => database.prepare(sql).run(...params),

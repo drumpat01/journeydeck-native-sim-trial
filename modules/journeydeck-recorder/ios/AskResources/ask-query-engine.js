@@ -8,6 +8,8 @@
     decision: ['answer', 'clarify', 'unsupported'],
     domain: ['journeys', 'music', 'memories', 'markers', 'places'],
     operation: ['total', 'average', 'latest', 'first', 'largest', 'smallest', 'list', 'rank', 'compare'],
+    // voiceMemos remains accepted as legacy untrusted model output so older
+    // proposals normalize to an explicit refusal instead of a malformed plan.
     metric: ['count', 'miles', 'minutes', 'songPlays', 'photos', 'voiceMemos'],
     period: ['available', 'allTime', 'today', 'yesterday', 'thisWeek', 'lastWeek', 'thisMonth', 'lastMonth', 'thisYear', 'lastYear', 'lastDays', 'date', 'between'],
     groupBy: ['none', 'day', 'month', 'year', 'artist', 'track', 'album', 'place'],
@@ -39,7 +41,7 @@
     if (p.operation === 'rank' && /\b(?:top|number one|#\s*1|most recorded|most played|most listened)\b/.test(q)) p.limit = 1;
     if (!hasPriorContext) p.selection = 'history';
 
-    const unsupported = /\b(?:delete|erase|remove all|start recording|stop recording|create (?:a )?marker|email|send|share)\b|\b(?:note|notes|transcript|transcripts|engine temperature|fuel|gas)\b|\bphotos? (?:containing|showing|with)\b|\b(?:color|colour) (?:were|was|are|is)\b|\broute(?:s)? (?:crossed|crossing)\b|\b(?:excluding|except|without)\b/;
+    const unsupported = /\b(?:delete|erase|remove all|start recording|stop recording|create (?:a )?marker|email|send|share)\b|\b(?:note|notes|transcript|transcripts|voice memos?|engine temperature|fuel|gas)\b|\bphotos? (?:containing|showing|with)\b|\b(?:color|colour) (?:were|was|are|is)\b|\broute(?:s)? (?:crossed|crossing)\b|\b(?:excluding|except|without)\b/;
     const ambiguous = /\b(?:best|most fun|favorite|favourite)\b|\bbiggest one\b/;
     const domains = {
       journeys: /\b(?:journey|journeys|trip|trips|drive|drives|driving|mile|miles|mileage|distance|minutes?|duration)\b/,
@@ -49,7 +51,7 @@
       places: /\b(?:arrival|arrivals|arrive|arrived|ending at|ended at|end at|work|home)\b/,
     };
     const operations = {
-      total: /\b(?:how many|what is my|total|count|number of|sum|add|add up|how often)\b|^(?:miles|mileage|distance|minutes|photos?|voice memos?)\b/,
+      total: /\b(?:how many|what is my|total|count|number of|sum|add|add up|how often)\b|^(?:miles|mileage|distance|minutes|photos?)\b/,
       average: /\b(?:average|mean)\b/,
       latest: /\b(?:latest|last|most recent)\b/,
       first: /\bfirst\b/,
@@ -65,13 +67,13 @@
       minutes: /\b(?:minute|minutes|drive time|driving time|duration)\b/,
       songPlays: /\b(?:song|songs|music|play|plays)\b/,
       photos: /\bphotos?\b/,
-      voiceMemos: /\bvoice memos?\b/,
     };
     const followUp = hasPriorContext && /^(?:and |what about |how about )/.test(q);
     if (ambiguous.test(q)) p.decision = 'clarify';
     else if (unsupported.test(q)) p.decision = 'unsupported';
     else if ((followUp || domains[p.domain]?.test(q)) && operations[p.operation]?.test(q) && metrics[p.metric]?.test(q)) p.decision = 'answer';
     else p.decision = p.decision === 'clarify' ? 'clarify' : 'unsupported';
+    if (p.metric === 'voiceMemos') p.metric = 'count';
     return p;
   }
   function validate(raw, issues) {
@@ -89,7 +91,7 @@
     if ((p.operation === 'compare') !== (p.comparePeriod !== 'none')) return fail('compare requires comparePeriod; other operations require none');
     if ((p.operation === 'rank') !== (p.groupBy !== 'none')) return fail('rank requires groupBy; other operations require none');
     const metrics = { journeys: ['count', 'miles', 'minutes', 'songPlays'], music: ['count'],
-      memories: ['count', 'photos'], markers: ['count', 'photos', 'voiceMemos'], places: ['count'] };
+      memories: ['count', 'photos'], markers: ['count', 'photos'], places: ['count'] };
     if (!metrics[p.domain].includes(p.metric)) return fail('metric is not supported for domain ' + p.domain);
     if (['largest', 'smallest', 'average'].includes(p.operation) && p.metric === 'count') return fail('numeric metric required for largest/smallest/average');
     if (['artist', 'track', 'album'].includes(p.groupBy) && p.domain !== 'music') return fail('music grouping requires music domain');
@@ -178,7 +180,7 @@
         .map(j => ({ id: j.id, journeyId: j.id, at: j.endedAt, place: places.get(j.endPlaceId) }));
     }
     const rows = rowsFor(r), unit = { count: p.domain === 'music' ? 'recorded song plays' : p.domain === 'places' ? 'recorded arrivals' : p.domain,
-      miles: 'miles', minutes: 'minutes', songPlays: 'recorded song plays', photos: 'photos', voiceMemos: 'voice memos' }[p.metric];
+      miles: 'miles', minutes: 'minutes', songPlays: 'recorded song plays', photos: 'photos' }[p.metric];
     const value = row => p.metric === 'count' ? 1 : row[p.metric];
     const total = data => data.reduce((n, row) => n + value(row), 0);
     if (rows.some(row => !finite(value(row)))) return unavailable();

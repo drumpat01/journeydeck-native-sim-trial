@@ -96,7 +96,7 @@ export function AskJourneyDeckScreen() {
           <Text style={{ color: c.accent, fontSize: 15 }}>{example}</Text>
         </Pressable>)}
       </View>
-      <Text style={{ color: c.muted, fontSize: 12, lineHeight: 18 }}>Apple Intelligence interprets supported English questions about journeys, music, Memories, markers, and recorded arrivals. JourneyDeck calculates each answer from your local history. Notes, photo contents, and voice transcripts are not searchable yet. Simple questions also work without Apple Intelligence. Questions are not saved. Siri follows your Apple settings; say “Ask JourneyDeck V3.” Your device must be unlocked.</Text>
+      <Text style={{ color: c.muted, fontSize: 12, lineHeight: 18 }}>Apple Intelligence interprets supported English questions about journeys, music, Memories, markers, and recorded arrivals. JourneyDeck calculates each answer from your local history. Notes and photo contents are not searchable. Simple questions also work without Apple Intelligence. Questions are not saved. Siri follows your Apple settings; say “Ask JourneyDeck V3.” Your device must be unlocked.</Text>
       {canShowSiriTesting && <Pressable accessibilityRole="button" onPress={() => router.push('/siri-testing')} style={{ minHeight: 48, justifyContent: 'center' }}>
         <Text style={{ color: c.accent, fontSize: 16 }}>Open Siri AI testing ›</Text>
       </Pressable>}

@@ -10,7 +10,7 @@ import ts from 'typescript';
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const require = createRequire(import.meta.url);
 const source = readFileSync(new URL('../src/journey-markers.tsx', import.meta.url), 'utf8');
-const compiled = ts.transpileModule(source + '\nexports.MarkerEditor = MarkerEditor; exports.MarkerVoiceRecorder = MarkerVoiceRecorder;',
+const compiled = ts.transpileModule(source + '\nexports.MarkerEditor = MarkerEditor;',
   { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
 const host = (name: string) => ({ children, ...props }: any) => React.createElement(name, props, children);
 const flush = async () => { for (let i = 0; i < 20; i++) await Promise.resolve(); };
@@ -18,18 +18,14 @@ const marker = { id: 'marker-test', capturedAt: '2026-09-17T12:00:00Z', location
 
 function fixture(compat = false) {
   const state = { notes: 'Original', captures: 0, imports: 0, failCapture: false, failSave: false, attachments: 0, done: 0, alerts: [] as string[], deleted: [] as string[], recording: false };
-  const recorder = { isRecording: false, uri: 'file:///cache/memo.m4a', prepareToRecordAsync: async () => {},
-    record() { recorder.isRecording = true; }, stop: async () => { recorder.isRecording = false; } };
   const deps: Record<string, any> = {
     'react': React, 'react/jsx-runtime': require('react/jsx-runtime'),
     'react-native': { View: host('View'), Pressable: host('Pressable'), Text: host('Text'), TextInput: host('TextInput'), StyleSheet: { create: (s: any) => s },
-      AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) }, Alert: { alert: (title: string) => state.alerts.push(title) } },
+      Alert: { alert: (title: string) => state.alerts.push(title) } },
     'expo-image': { Image: host('Image') },
     'expo-image-picker': { launchImageLibraryAsync: async () => ({ canceled: true }) },
     'expo-image-manipulator': { SaveFormat: { JPEG: 'jpeg' } },
     'expo-file-system/legacy': { deleteAsync: async (uri: string) => { state.deleted.push(uri); } },
-    'expo-audio': { useAudioRecorder: () => recorder, useAudioRecorderState: () => ({ durationMillis: 1000 }), RecordingPresets: { HIGH_QUALITY: {} },
-      setAudioModeAsync: async () => {}, requestRecordingPermissionsAsync: async () => ({ granted: true }) },
     './journey-marker-compatibility': { MARKER_OTA_COMPAT: compat },
     './journey-marker-capture': { captureJourneyMarker: async (session: string) => { assert.equal(session, 'session'); state.captures++; if (state.failCapture) throw Error('Waiting for GPS'); return 'saved'; } },
     './auth': { getCurrentUser: () => ({ id: 'owner' }) }, './native-recorder-inbox': { syncNativeRecorderInbox: async () => { state.imports++; } },
@@ -46,19 +42,17 @@ function fixture(compat = false) {
   };
   const exports: any = {};
   vm.runInNewContext(compiled, { exports, require: (id: string) => { assert.ok(id in deps, id); return deps[id]; }, setTimeout: () => 1, clearTimeout() {}, Date, Error, console });
-  return { api: exports, state, recorder };
+  return { api: exports, state };
 }
 function text(node: any): string { return node.children.map((child: any) => typeof child === 'string' ? child : text(child)).join(''); }
 function button(tree: any, label: string) { return tree.root.findAllByType('Pressable').find((node: any) => text(node) === label); }
 
-test('OTA editor blocks voice recording while keeping notes available', async () => {
+test('marker editor offers notes and photos without voice recording', async () => {
   const f = fixture(true); let tree: any;
   await act(() => { tree = create(React.createElement(f.api.MarkerEditor, { userId: 'owner', marker, onClose() {} })); });
-  const voice = button(tree, 'Voice memo · next build');
-  assert.equal(voice.props.disabled, true);
-  await act(() => voice.props.onPress());
-  assert.equal(button(tree, 'Start recording'), undefined);
   assert.ok(button(tree, 'Save notes'));
+  assert.ok(button(tree, 'Add photo'));
+  assert.doesNotMatch(text(tree.root), /voice memo/i);
   await act(() => tree.unmount());
 });
 
@@ -85,25 +79,5 @@ test('notes stay dirty after failed save and become clean only after successful 
   f.state.failSave = false;
   await act(async () => { button(tree, 'Save notes').props.onPress(); await flush(); });
   assert.equal(f.state.notes, 'Changed'); assert.equal(tree.root.findByType('Sheet').props.dirty, false);
-  await act(() => tree.unmount());
-});
-
-test('voice capture can stop inside its sheet and a failed save retains the memo for retry', async () => {
-  const f = fixture(); let tree: any;
-  await act(() => { tree = create(React.createElement(f.api.MarkerEditor, { userId: 'owner', marker, onClose() {} })); });
-  await act(() => button(tree, 'Record voice memo').props.onPress());
-  const sheet = tree.root.findByType('Sheet');
-  assert.equal(sheet.props.busy, false, 'sheet body must stay interactive so Stop remains tappable');
-  assert.equal(sheet.props.closeDisabled, true);
-  await act(async () => { button(tree, 'Start recording').props.onPress(); await flush(); });
-  assert.equal(f.recorder.isRecording, true);
-  f.state.failSave = true;
-  await act(async () => { button(tree, 'Stop & save memo').props.onPress(); await flush(); });
-  assert.equal(f.recorder.isRecording, false); assert.equal(f.state.attachments, 0); assert.equal(f.state.deleted.length, 0);
-  assert.ok(button(tree, 'Retry saving memo'));
-  f.state.failSave = false;
-  await act(async () => { button(tree, 'Retry saving memo').props.onPress(); await flush(); });
-  assert.equal(f.state.attachments, 1); assert.deepEqual(f.state.deleted, [f.recorder.uri]);
-  assert.equal(tree.root.findByType('Sheet').props.closeDisabled, false);
   await act(() => tree.unmount());
 });

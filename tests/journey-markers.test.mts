@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import vm from 'node:vm';
 import { validCapturedMarker } from '../src/journey-marker-model.ts';
+import { JOURNEY_MARKER_SCHEMA_SQL, JOURNEY_MARKER_SYNC_SCHEMA_SQL } from '../src/journey-marker-schema.ts';
 
 const require = createRequire(import.meta.url), ts = require('typescript');
 const directory = fileURLToPath(new URL('../src/', import.meta.url));
@@ -56,7 +57,9 @@ function fixture(compat = false) {
   local.insertGpsPoints(state.userId, rootId, Array.from({ length: 11 }, (_, i) => ({ sequence: i, recordedAt: at(i), latitude: 0, longitude: .001 * i, accuracyMeters: 5, altitudeMeters: null, headingDegrees: 90, speedMps: 10 })));
   if (compat) database.prepare('INSERT INTO local_preferences(key,value,updated_at) VALUES(?,?,?)').run(
     `journey.marker.v1:${encodeURIComponent(state.userId)}:${marker.id}`, JSON.stringify({ ...marker, userId: state.userId, sessionId: 'native_recording_test', notes: '', media: [] }), at(3));
-  else database.prepare(`INSERT INTO local_journey_markers(id,user_id,session_id,root_journey_id,captured_at,location_at,latitude,longitude,accuracy_meters) VALUES(?,?,'session','root',?,?,0,0,5)`).run(marker.id, state.userId, marker.capturedAt, marker.locationAt);
+  else database.prepare(`INSERT INTO local_journey_markers(
+    id,user_id,session_id,root_journey_id,captured_at,location_at,latitude,longitude,accuracy_meters,created_at,updated_at
+  ) VALUES(?,?,'session','root',?,?,0,0,5,?,?)`).run(marker.id, state.userId, marker.capturedAt, marker.locationAt, marker.capturedAt, marker.capturedAt);
   return { database, files, state, local, rootId, upgrade() { state.compat = false; loaded.delete(resolve(directory, 'local-store.ts')); loaded.delete(resolve(directory, 'journey-marker-compatibility.ts')); load(resolve(directory, 'local-store.ts')).initializeLocalStore(); }, markers: load(resolve(directory, 'journey-marker-store.ts')), editor: load(resolve(directory, 'journey-editor-store.ts')), close: () => database.close() };
 }
 
@@ -67,7 +70,7 @@ test('capture validation rejects stale, future, inaccurate, out-of-session and i
   }
 });
 
-test('OTA keeps schema 7 intact, saves real notes/photos, and upgrades all content atomically into schema 8', async () => {
+test('OTA keeps schema 7 intact, saves real notes/photos, and upgrades all content atomically into schema 9', async () => {
   const f = fixture(true);
   try {
     assert.equal(f.database.prepare('PRAGMA user_version').get()?.user_version, 7);
@@ -77,14 +80,59 @@ test('OTA keeps schema 7 intact, saves real notes/photos, and upgrades all conte
     assert.equal(f.markers.listJourneyMarkers(f.state.userId, f.rootId)[0].notes, 'Saved using the OTA');
     assert.equal(f.markers.listMarkerJourneys(f.state.userId).length, 1);
     assert.equal(f.markers.listMarkerMedia(f.state.userId, marker.id).length, 1);
-    await assert.rejects(f.markers.addMarkerMedia(f.state.userId, marker.id, 'voice', 'file:///cache/v.m4a'), /new JourneyDeck build/);
     assert.equal(f.database.prepare('PRAGMA user_version').get()?.user_version, 7);
     f.upgrade();
-    assert.equal(f.database.prepare('PRAGMA user_version').get()?.user_version, 8);
+    assert.equal(f.database.prepare('PRAGMA user_version').get()?.user_version, 9);
     assert.equal(f.database.prepare('SELECT notes FROM local_journey_markers').get()?.notes, 'Saved using the OTA');
     assert.equal(f.database.prepare('SELECT COUNT(*) AS n FROM local_marker_media').get()?.n, 1);
     assert.equal(f.database.prepare("SELECT COUNT(*) AS n FROM local_preferences WHERE key LIKE 'journey.marker.v1:%'").get()?.n, 0);
     assert.equal(f.files.size, 1, 'upgrade preserves the saved photo');
+  } finally { f.close(); }
+});
+
+test('schema 9 preserves schema 8 markers and backfills revision-safe sync metadata', () => {
+  const database = new DatabaseSync(':memory:');
+  try {
+    database.exec("CREATE TABLE local_users(id TEXT PRIMARY KEY); INSERT INTO local_users VALUES('owner');");
+    database.exec(JOURNEY_MARKER_SCHEMA_SQL);
+    database.prepare(`INSERT INTO local_journey_markers(
+      id,user_id,session_id,root_journey_id,captured_at,location_at,latitude,longitude,accuracy_meters,notes
+    ) VALUES('marker','owner','session','root',?,?,?,?,5,'Kept')`).run(at(3), at(3), 0, 0);
+    database.prepare("INSERT INTO local_marker_media(id,marker_id,kind,file_name,created_at) VALUES('photo','marker','photo','photo.jpg',?)").run(at(4));
+    database.exec(JOURNEY_MARKER_SYNC_SCHEMA_SQL);
+    const saved = database.prepare(`SELECT notes,synced_to_cloud AS syncedToCloud,sync_revision AS syncRevision,
+      created_at AS createdAt,updated_at AS updatedAt FROM local_journey_markers`).get();
+    assert.deepEqual({ ...saved }, { notes: 'Kept', syncedToCloud: 0, syncRevision: 1, createdAt: at(3), updatedAt: at(3) });
+    const photo = database.prepare(`SELECT synced_to_cloud AS syncedToCloud,sync_revision AS syncRevision,
+      deleted_at AS deletedAt,updated_at AS updatedAt FROM local_marker_media`).get();
+    assert.deepEqual({ ...photo }, { syncedToCloud: 0, syncRevision: 1, deletedAt: null, updatedAt: at(4) });
+    assert.throws(() => database.prepare("UPDATE local_journey_markers SET latitude=1 WHERE id='marker'").run(), /identity is immutable/);
+    assert.throws(() => database.prepare("UPDATE local_marker_media SET marker_id='other' WHERE id='photo'").run(), /identity is immutable/);
+    database.prepare("UPDATE local_journey_markers SET notes='Still editable' WHERE id='marker'").run();
+    assert.equal(database.prepare("SELECT notes FROM local_journey_markers WHERE id='marker'").get()?.notes, 'Still editable');
+  } finally { database.close(); }
+});
+
+test('notes and photo mutations enter revision-safe pending sync queues', async () => {
+  const f = fixture();
+  try {
+    let pending = f.markers.listMarkersPendingPrivateSync(f.state.userId);
+    assert.equal(pending.length, 1); assert.equal(pending[0].syncRevision, 1);
+    f.markers.saveMarkerNotes(f.state.userId, marker.id, 'Cloud note');
+    pending = f.markers.listMarkersPendingPrivateSync(f.state.userId);
+    assert.equal(pending[0].syncRevision, 2); assert.equal(pending[0].notes, 'Cloud note');
+    f.markers.saveMarkerNotes(f.state.userId, marker.id, 'Cloud note');
+    assert.equal(f.markers.listMarkersPendingPrivateSync(f.state.userId)[0].syncRevision, 2, 'no-op save does not create another revision');
+
+    await f.markers.addMarkerMedia(f.state.userId, marker.id, 'photo', 'file:///cache/p.jpg');
+    const visible = f.markers.listMarkerMedia(f.state.userId, marker.id);
+    assert.equal(visible.length, 1);
+    let photos = f.markers.listMarkerPhotosPendingPrivateSync(f.state.userId);
+    assert.equal(photos.length, 1); assert.equal(photos[0].syncRevision, 1); assert.equal(photos[0].deletedAt, null);
+    await f.markers.removeMarkerMedia(f.state.userId, marker.id, visible[0]);
+    assert.equal(f.markers.listMarkerMedia(f.state.userId, marker.id).length, 0);
+    photos = f.markers.listMarkerPhotosPendingPrivateSync(f.state.userId);
+    assert.equal(photos.length, 1); assert.equal(photos[0].syncRevision, 2); assert.ok(photos[0].deletedAt);
   } finally { f.close(); }
 });
 
@@ -106,16 +154,15 @@ test('notes and multiple attachments persist; profile boundaries and path traver
   try {
     f.markers.saveMarkerNotes(f.state.userId, marker.id, 'A great moment');
     await f.markers.addMarkerMedia(f.state.userId, marker.id, 'photo', 'file:///cache/picture.jpg');
-    await f.markers.addMarkerMedia(f.state.userId, marker.id, 'voice', 'file:///cache/memo.m4a');
     assert.equal(f.markers.listJourneyMarkers(f.state.userId, 'root')[0].notes, 'A great moment');
     const media = f.markers.listMarkerMedia(f.state.userId, marker.id);
-    assert.equal(media.length, 2); assert.equal(f.files.size, 2);
+    assert.equal(media.length, 1); assert.equal(f.files.size, 1);
     assert.ok(f.markers.markerMediaUri(f.state.userId, media[0]).startsWith('file:///Documents/journeydeck-marker-media/'));
     assert.throws(() => f.markers.markerMediaUri(f.state.userId, { ...media[0], fileName: '../secret.jpg' }), /Invalid/);
     assert.throws(() => f.markers.listJourneyMarkers('other', 'root'), /profile/);
     await f.markers.removeMarkerMedia(f.state.userId, marker.id, media[0]);
-    assert.equal(f.markers.listMarkerMedia(f.state.userId, marker.id).length, 1);
-    assert.equal(f.files.size, 1);
+    assert.equal(f.markers.listMarkerMedia(f.state.userId, marker.id).length, 0);
+    assert.equal(f.files.size, 0);
   } finally { f.close(); }
 });
 

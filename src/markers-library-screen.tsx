@@ -21,7 +21,7 @@ export function MarkersLibraryScreen() {
     contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}
     ListHeaderComponent={<View style={styles.header}><Text style={styles.title}>Keep the moments between destinations.</Text>
       <Text style={styles.body}>{MARKER_OTA_COMPAT ? 'While recording with JourneyDeck open, tap Create a marker. This saves a real timestamp and GPS location to your active journey.' : 'While recording, say “Siri, create a marker in JourneyDeck V3,” or tap Create a marker in the recorder.'}</Text>
-      <Text style={styles.body}>{MARKER_OTA_COMPAT ? 'After your drive, tap a polaroid pin to add notes and photos. Siri capture and voice recording require the next app build.' : 'After your drive, open a journey and tap its polaroid pin to add notes, photos, or voice memos.'}</Text>
+      <Text style={styles.body}>{MARKER_OTA_COMPAT ? 'After your drive, tap a polaroid pin to add notes and photos. Siri capture requires the next app build.' : 'After your drive, open a journey and tap its polaroid pin to add notes or photos.'}</Text>
       <Text style={styles.body}>Saved privately on this device. Markers are not yet included in iCloud sync.</Text>
       <Text style={styles.title}>Journeys with markers</Text></View>}
     ListEmptyComponent={<Text style={styles.body}>{V3_MARKERS_PROTOTYPE_ENABLED ? 'Completed journeys with markers will appear here. You can also find them below each journey’s route.' : 'Markers are available in JourneyDeck V3.'}</Text>}

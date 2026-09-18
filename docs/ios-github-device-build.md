@@ -1,7 +1,7 @@
 # V3 registered-device build on GitHub
 
 The manual `ios-v3-device.yml` workflow compiles the complete JourneyDeck V3 app and
-its Watch companion on the standard `macos-26` runner in the existing public mobile
+its Watch companion on the public `xcode-27` preview runner in the isolated mobile
 snapshot repository. It never invokes EAS Build or starts a simulator/video stream.
 It allows 60 minutes for Xcode compilation within a 90-minute job. Dependency caches
 are reused; signed apps, certificates and provisioning profiles are never cached.
@@ -31,7 +31,7 @@ Provide the decrypted IPA through a temporary HTTPS installation manifest availa
 only through an unguessable installation link; stop hosting after installation.
 The encrypted artifact itself is not an iPhone installation link.
 
-The build retains the V3 identity and CloudKit container, runtime preview.3, internal
+The build retains the V3 identity and CloudKit container, runtime preview.4, internal
 testing flag and v3-preview OTA channel. It must not target the old marker-compatible
 runtime preview.2. The old V2 App Store identity remains frozen.
 

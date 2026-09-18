@@ -8,7 +8,7 @@ import FoundationModels
 private struct JourneyDeckQueryPlan {
   @Guide(.anyOf(["journeys", "music", "memories", "markers", "places"])) var domain: String
   @Guide(.anyOf(["total", "average", "latest", "first", "largest", "smallest", "list", "rank", "compare"])) var operation: String
-  @Guide(description: "Music plays and place arrivals use count. songPlays is only for journeys.", .anyOf(["count", "miles", "minutes", "songPlays", "photos", "voiceMemos"])) var metric: String
+  @Guide(description: "Music plays and place arrivals use count. songPlays is only for journeys.", .anyOf(["count", "miles", "minutes", "songPlays", "photos"])) var metric: String
   @Guide(.anyOf(["available", "allTime", "today", "yesterday", "thisWeek", "lastWeek", "thisMonth", "lastMonth", "thisYear", "lastYear", "lastDays", "date", "between"])) var period: String
   @Guide(description: "Only for lastDays, otherwise zero", .range(0...999)) var days: Int
   @Guide(description: "YYYY-MM-DD for date/between, otherwise empty") var startDate: String
@@ -81,8 +81,8 @@ enum JourneyDeckAIPlanner {
         If any requested condition is unsupported, choose unsupported. Never drop a condition.
         Ambiguous biggest/favorite/best questions require clarify. Longest journey means miles.
         Journeys support count/miles/minutes/songPlays. Music and places support count only.
-        Memories support count/photos. Markers support count/photos/voiceMemos.
-        Counting attached photos or voice memos is supported; interpreting their contents is not.
+        Memories and Markers support count/photos.
+        Counting attached photos is supported; interpreting photo contents is not.
         Ranking music by artist/track/album uses domain music, metric count, operation rank.
         Ranking by month/day/year sums the chosen metric; compare sums two periods.
         Largest/smallest/average require a numeric metric other than count.

@@ -20,7 +20,7 @@ private final class AskArchive {
     }
     sqlite3_busy_timeout(db, 1000)
     guard try rows("PRAGMA application_id", []).first?["application_id"] as? Int64 == 0x4a444c31,
-          try rows("PRAGMA user_version", []).first?["user_version"] as? Int64 == 8 else { throw AskFailure.unavailable }
+          try rows("PRAGMA user_version", []).first?["user_version"] as? Int64 == 9 else { throw AskFailure.unavailable }
   }
   deinit { if let db { sqlite3_close(db) } }
   static func resource(_ name: String, _ ext: String) throws -> Data {

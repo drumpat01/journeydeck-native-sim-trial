@@ -4,7 +4,7 @@ import { CardDetailLink } from './card-detail-link';
 import { useAppTheme, useThemedStyles } from './app-theme';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  ActivityIndicator, I18nManager, InteractionManager, Modal, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions,
+  ActivityIndicator, I18nManager, Modal, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -916,7 +916,7 @@ export function DataHealthScreen({ active, state, dashboard, privateCloud, apple
   useEffect(() => {
     if (!active) return;
     setRetentionPreviewState('loading');
-    const task = InteractionManager.runAfterInteractions(() => {
+    const task = requestIdleCallback(() => {
       try {
         setRetentionPreview(previewLocalRetention(getCurrentUser().id, { retentionDays }));
         setRetentionPreviewState('ready');
@@ -925,7 +925,7 @@ export function DataHealthScreen({ active, state, dashboard, privateCloud, apple
         setRetentionPreviewState('error');
       }
     });
-    return () => task.cancel();
+    return () => cancelIdleCallback(task);
   }, [active, retentionDays, retentionRefresh, state.data?.loadedAt]);
   const forceArtworkRefresh = async () => {
     if (artworkRefreshState === 'running') return;

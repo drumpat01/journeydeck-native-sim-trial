@@ -36,7 +36,7 @@ import {
 import { findDuplicatePlayback, partitionDuplicatePlaybacks } from './music-playback-dedupe';
 import { getMasterDatabase, openMasterDatabase } from './database-owner';
 import { PRIVATE_PLACE_PREFIX, parsePrivatePlace, privatePlaceValue, savedPlaceLocalId } from './private-place-record';
-import { JOURNEY_MARKER_SCHEMA_SQL } from './journey-marker-schema';
+import { JOURNEY_MARKER_SCHEMA_SQL, JOURNEY_MARKER_SYNC_SCHEMA_SQL } from './journey-marker-schema';
 import { JOURNEY_EDITOR_SCHEMA_SQL } from './journey-editor-schema';
 
 // --- Database handle (single shared connection, WAL mode) --------------------
@@ -485,6 +485,8 @@ const MIGRATIONS: Array<() => void> = [
   () => { db.execSync(JOURNEY_EDITOR_SCHEMA_SQL); },
   // Migration 8 -- durable journey markers and private attachment references.
   () => { db.execSync(JOURNEY_MARKER_SCHEMA_SQL); migrateCompatMarkers(db); },
+  // Migration 9 -- revision-safe private-sync queues for Markers and photos.
+  () => { db.execSync(JOURNEY_MARKER_SYNC_SCHEMA_SQL); },
 ];
 
 const PLAYBACK_DEDUPE_REPAIR_KEY = 'repair.music-playback-dedupe.v1';

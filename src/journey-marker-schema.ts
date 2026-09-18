@@ -22,3 +22,34 @@ CREATE TABLE IF NOT EXISTS local_marker_media(
  created_at TEXT NOT NULL
 );
 `;
+
+/** Additive private-sync metadata for existing schema-8 Marker rows. */
+export const JOURNEY_MARKER_SYNC_SCHEMA_SQL = `
+ALTER TABLE local_journey_markers ADD COLUMN synced_to_cloud INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE local_journey_markers ADD COLUMN sync_revision INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE local_journey_markers ADD COLUMN created_at TEXT NOT NULL DEFAULT '';
+ALTER TABLE local_journey_markers ADD COLUMN updated_at TEXT NOT NULL DEFAULT '';
+UPDATE local_journey_markers
+SET created_at=CASE WHEN created_at='' THEN captured_at ELSE created_at END,
+    updated_at=CASE WHEN updated_at='' THEN COALESCE(deleted_at,captured_at) ELSE updated_at END;
+CREATE INDEX IF NOT EXISTS ix_markers_cloud ON local_journey_markers(user_id,synced_to_cloud,updated_at);
+CREATE TRIGGER IF NOT EXISTS trg_marker_capture_identity_immutable
+BEFORE UPDATE OF id,user_id,session_id,root_journey_id,captured_at,location_at,latitude,longitude,accuracy_meters
+ON local_journey_markers
+BEGIN
+ SELECT RAISE(ABORT,'marker capture identity is immutable');
+END;
+
+ALTER TABLE local_marker_media ADD COLUMN synced_to_cloud INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE local_marker_media ADD COLUMN deleted_at TEXT;
+ALTER TABLE local_marker_media ADD COLUMN sync_revision INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE local_marker_media ADD COLUMN updated_at TEXT NOT NULL DEFAULT '';
+UPDATE local_marker_media SET updated_at=created_at WHERE updated_at='';
+CREATE INDEX IF NOT EXISTS ix_marker_media_cloud ON local_marker_media(marker_id,synced_to_cloud,updated_at);
+CREATE TRIGGER IF NOT EXISTS trg_marker_photo_identity_immutable
+BEFORE UPDATE OF id,marker_id,kind,file_name,created_at
+ON local_marker_media
+BEGIN
+ SELECT RAISE(ABORT,'marker photo identity is immutable');
+END;
+`;

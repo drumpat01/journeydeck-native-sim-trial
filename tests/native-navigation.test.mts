@@ -183,7 +183,7 @@ test('screen context updates and tab changes retain drafts and one Home recorder
   // context consumers under that lifecycle, including replacement JSX props.
   const nativeHost = readFileSync(new URL('../node_modules/expo-router/build/native-tabs/NativeTabsView.ios.js', import.meta.url), 'utf8');
   assert.match(nativeHost, /const children = tabs\.map/);
-  assert.match(nativeHost, /tab\.routeKey/);
+  assert.match(nativeHost, /screenKey: shared\.screenKey/);
   const render = (selected: string) => React.createElement(navigationContext.NativeNavigationContext.Provider, {
     value: { tabs: Object.fromEntries(tabs.map(tab => [tab, React.createElement(Probe, { tab })])), onTabFocus: () => {} },
   }, tabs.map(tab => React.createElement('native-screen', { key: tab, hidden: selected !== tab }, React.createElement(navigation.NativeTabScreen, { tab }))));
@@ -203,28 +203,32 @@ test('screen context updates and tab changes retain drafts and one Home recorder
 test('Expo stack retains Memory and tab keys when opening a Journey and going back', () => {
   const { StackRouter } = require('../node_modules/expo-router/build/react-navigation/routers/StackRouter.js');
   const { TabRouter } = require('../node_modules/expo-router/build/react-navigation/routers/TabRouter.js');
+  const { createInitialState } = require('../node_modules/expo-router/build/react-navigation/core/createInitialState.js');
   const tabOptions = { routeNames: ['music', 'journeys', 'index', 'statistics', 'settings'], routeParamList: {}, routeGetIdList: {} };
   const tabRouter = TabRouter({ initialRouteName: 'index', backBehavior: 'history' });
-  let tabState = tabRouter.getInitialState(tabOptions);
+  let tabState = tabRouter.normalizeState(createInitialState({ ...tabOptions, initialRouteName: 'index', parentChain: ['(tabs)'] }));
   assert.equal(tabState.routes[tabState.index].name, 'index');
-  const tabKeys = tabState.routes.map((route: any) => route.key);
   for (const name of ['settings', 'music', 'journeys']) {
-    tabState = tabRouter.getStateForAction(tabState, { type: 'JUMP_TO', payload: { name } }, tabOptions);
-    assert.deepEqual(tabState.routes.map((route: any) => route.key), tabKeys);
+    tabState = tabRouter.getStateForAction(tabState, { type: 'JUMP_TO', payload: { name } }, tabOptions).state;
+  }
+  const tabKeys = Object.fromEntries(tabState.routes.map((route: any) => [route.name, route.key]));
+  for (const name of ['index', 'music', 'journeys']) {
+    tabState = tabRouter.getStateForAction(tabState, { type: 'JUMP_TO', payload: { name } }, tabOptions).state;
+    assert.deepEqual(Object.fromEntries(tabState.routes.map((route: any) => [route.name, route.key])), tabKeys);
   }
   const stack = StackRouter({ initialRouteName: '(tabs)' });
   const options = { routeNames: ['(tabs)', 'memory/[id]', 'journey/[id]', 'atlas', 'tools'], routeParamList: {}, routeGetIdList: {} };
-  let state = stack.getInitialState(options);
+  let state = createInitialState({ ...options, initialRouteName: '(tabs)', parentChain: [] });
   state.routes[0].state = tabState;
   const tabKey = state.routes[0].key;
-  state = stack.getStateForAction(state, { type: 'PUSH', payload: { name: 'memory/[id]', params: { id: 'memory-a' } } }, options);
+  state = stack.getStateForAction(state, { type: 'PUSH', payload: { name: 'memory/[id]', params: { id: 'memory-a' } } }, options).state;
   const memoryKey = state.routes[1].key;
-  state = stack.getStateForAction(state, { type: 'PUSH', payload: { name: 'journey/[id]', params: { id: 'journey-b' } } }, options);
-  state = stack.getStateForAction(state, { type: 'GO_BACK' }, options);
+  state = stack.getStateForAction(state, { type: 'PUSH', payload: { name: 'journey/[id]', params: { id: 'journey-b' } } }, options).state;
+  state = stack.getStateForAction(state, { type: 'GO_BACK' }, options).state;
   assert.equal(state.routes[state.index].key, memoryKey);
   assert.equal(state.routes[0].key, tabKey);
   assert.equal(state.routes[0].state, tabState);
-  state = stack.getStateForAction(state, { type: 'GO_BACK' }, options);
+  state = stack.getStateForAction(state, { type: 'GO_BACK' }, options).state;
   assert.equal(state.routes[state.index].name, '(tabs)');
   assert.equal(state.routes[0].state.routes[tabState.index].name, 'journeys');
 });

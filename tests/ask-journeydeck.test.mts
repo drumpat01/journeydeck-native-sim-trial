@@ -61,12 +61,12 @@ test('AI analysis SQL is read-only, profile scoped, and excludes marker content 
     const marker = f.db.prepare('INSERT INTO local_journey_markers(id,user_id,session_id,root_journey_id,captured_at,location_at,latitude,longitude,accuracy_meters,notes) VALUES(?,?,?,?,?,?,?,?,?,?)');
     marker.run('marker-a', f.a, 'session', 'a-last', iso(15), iso(15), 0, 0, 10, 'SECRET NOTE');
     marker.run('marker-b', f.b, 'other', 'b-secret', iso(16), iso(16), 0, 0, 10, 'OTHER SECRET');
-    f.db.prepare('INSERT INTO local_marker_media VALUES(?,?,?,?,?)').run('media', 'marker-a', 'voice', 'private-file.m4a', iso(15));
+    f.db.prepare('INSERT INTO local_marker_media(id,marker_id,kind,file_name,created_at) VALUES(?,?,?,?,?)').run('media', 'marker-a', 'voice', 'private-file.m4a', iso(15));
     const values = [f.a, new Date(now - 45 * 86400000).toISOString(), new Date(now).toISOString()];
     const data = Object.fromEntries(Object.entries(analysisQueries).map(([key, sql]) => [key, f.db.prepare(sql as string).all(...(key === 'places' ? [f.a] : values))]));
     assert.equal(data.journeys.length, 3); assert.equal(data.music.length, 3); assert.equal(data.memories.length, 1);
     assert.equal(data.memoryJourneys.length, 1); assert.equal(data.memoryJourneys[0].journeyId, 'a-week');
-    assert.equal(data.markers.length, 1); assert.equal(data.markers[0].voiceMemos, 1);
+    assert.equal(data.markers.length, 1); assert.equal(data.markers[0].photos, 0);
     assert.doesNotMatch(JSON.stringify(data), /SECRET|private-file|123 Private Road|latitude|longitude|999/);
     f.db.prepare('UPDATE local_journey_markers SET deleted_at=? WHERE id=?').run(iso(16), 'marker-a');
     assert.equal(f.db.prepare(analysisQueries.markers).all(...values).length, 0);

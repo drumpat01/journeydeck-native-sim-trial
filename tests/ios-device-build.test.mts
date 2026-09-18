@@ -37,7 +37,7 @@ test('device workflow is manual, public standard runner only, and exports only a
   for (const url of candidates) { try { text = readFileSync(url, 'utf8'); break; } catch { /* mobile snapshot or main repository */ } }
   const w = require('yaml').parse(text);
   assert.deepEqual(Object.keys(w.on), ['workflow_dispatch']);
-  assert.equal(w.jobs.build['runs-on'], 'macos-26');
+  assert.equal(w.jobs.build['runs-on'], 'xcode-27');
   assert.match(w.jobs.build.if, /private == false/);
   assert.doesNotMatch(text, /eas build|simctl|serve-sim|\.p12\s*\n.*upload/);
   const upload = w.jobs.build.steps.find((s: any) => s.uses?.startsWith('actions/upload-artifact'));

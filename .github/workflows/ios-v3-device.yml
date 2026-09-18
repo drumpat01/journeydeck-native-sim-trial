@@ -10,7 +10,7 @@ jobs:
   build:
     # Standard public-repository runner only. No larger runner or EAS Build.
     if: github.event.repository.private == false
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 90
     env:
       APP_VARIANT: v3-preview

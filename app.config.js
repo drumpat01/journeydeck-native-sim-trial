@@ -12,7 +12,7 @@ module.exports = ({ config }) => {
   const revenueCatAppleKey = (preview || v3 ? process.env.REVENUECAT_PREVIEW_APPLE_API_KEY : process.env.REVENUECAT_PRODUCTION_APPLE_API_KEY) || '';
   if (revenueCatAppleKey && !/^appl_[A-Za-z0-9]+$/.test(revenueCatAppleKey)) throw new Error('RevenueCat requires a public Apple SDK key for the selected app.');
   const container = v3 ? 'iCloud.com.journeydeck.recorder.v3' : preview ? 'iCloud.com.journeydeck.recorder.v2' : 'iCloud.com.journeydeck.recorder';
-  const microphonePermission = v3 ? 'JourneyDeck uses the microphone when you choose to record a private marker voice memo or identify a song. Voice memos are saved on this device; song recognition audio is not saved.' : config.ios.infoPlist.NSMicrophoneUsageDescription;
+  const microphonePermission = v3 ? 'JourneyDeck uses the microphone only when you choose to identify a song. Song recognition audio is not saved.' : config.ios.infoPlist.NSMicrophoneUsageDescription;
   const photoPermission = 'JourneyDeck uses the dates and locations of photos you allow to suggest photos for your journeys. You review and choose which photos to add to Memories.';
   const existingPlugins = (config.plugins ?? []).map(plugin => Array.isArray(plugin) && plugin[0] === 'expo-image-picker'
     ? [plugin[0], { ...plugin[1], photosPermission: photoPermission }] : plugin);
@@ -21,8 +21,8 @@ module.exports = ({ config }) => {
     name: v3 ? 'JourneyDeck V3' : preview ? 'JourneyDeck V2' : config.name,
     version: v3 ? '3.0.0' : '2.0.0',
     icon: './assets/icon-grand-touring-v2.png',
-    // Marker capture/Siri and schema 8 require a new V3 binary; never OTA to older builds.
-    runtimeVersion: markerOtaCompat ? '3.0.0-preview.2' : v3 ? '3.0.0-preview.3' : preview ? '2.0.0-preview.14' : '2.0.0-watch.9',
+    // Marker capture/Siri and schema 9 require a new V3 binary; never OTA to older builds.
+    runtimeVersion: markerOtaCompat ? '3.0.0-preview.2' : v3 ? '3.0.0-preview.4' : preview ? '2.0.0-preview.14' : '2.0.0-watch.9',
     plugins: [...existingPlugins, 'expo-router', ['expo-audio', {
       microphonePermission,
       recordAudioAndroid: false, enableBackgroundRecording: false, enableBackgroundPlayback: false,

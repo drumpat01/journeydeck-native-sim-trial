@@ -3068,7 +3068,7 @@ function ConnectionsScreen({
     </TouchPressable>
     {V3_MARKERS_PROTOTYPE_ENABLED && <TouchPressable testID="markers-prototype-entry" accessibilityRole="button" accessibilityLabel="Open saved journey markers" onPress={() => router.push('/time-capsule-prototype')} style={({ pressed }) => [styles.settingsPrototypeCard, pressed && styles.pressed]}>
       <View style={styles.settingsPrototypeIcon}><SymbolView name="hourglass" tintColor="#f6f0e2" size={24} /></View>
-      <View style={styles.flex}><Text style={styles.settingsPrototypeKicker}>SAVED JOURNEY MOMENTS</Text><Text style={styles.settingsPrototypeTitle}>Markers</Text><Text style={styles.settingsPrototypeBody}>Open saved markers and add notes, photos, or voice memos after your drive.</Text></View>
+      <View style={styles.flex}><Text style={styles.settingsPrototypeKicker}>SAVED JOURNEY MOMENTS</Text><Text style={styles.settingsPrototypeTitle}>Markers</Text><Text style={styles.settingsPrototypeBody}>Open saved markers and add notes or photos after your drive.</Text></View>
       <Text style={styles.settingsHubChevron}>›</Text>
     </TouchPressable>}
     <View style={styles.settingsHubList}>{settingsCategories.map((category, index) => <TouchPressable key={category.id} accessibilityRole="button" accessibilityLabel={`Open ${category.title} settings`} onPress={() => openCategory(category.id)} style={({ pressed }) => [styles.settingsHubRow, index > 0 && styles.settingsHubRowBorder, pressed && styles.pressed]}>

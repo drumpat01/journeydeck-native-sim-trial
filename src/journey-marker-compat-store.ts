@@ -61,10 +61,11 @@ export function listMarkerJourneys(userId: string) {
     .filter(journey => listJourneyMarkers(userId, journey.id).length > 0).sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 }
 export function saveMarkerNotes(userId: string, id: string, notes: string) { put({ ...editable(userId, id), notes }); }
-export function listMarkerMedia(userId: string, id: string): MarkerMedia[] { return get(userId, id).media; }
+export function listMarkerMedia(userId: string, id: string): MarkerMedia[] {
+  return get(userId, id).media.filter((item): item is MarkerMedia => item.kind === 'photo');
+}
 export async function addMarkerMedia(userId: string, markerId: string, kind: MarkerMedia['kind'], uri: string) {
   editable(userId, markerId);
-  if (kind !== 'photo') throw new Error('Voice recording requires the new JourneyDeck build.');
   if (!uri.startsWith('file://')) throw new Error('Select a file on this device.');
   const id = randomUUID(), media: MarkerMedia = { id, kind, fileName: `${id}.jpg` };
   const destination = markerMediaUri(userId, media);
@@ -78,7 +79,7 @@ export async function addMarkerMedia(userId: string, markerId: string, kind: Mar
   } catch (error) { await FileSystem.deleteAsync(destination, { idempotent: true }); throw error; }
 }
 export async function removeMarkerMedia(userId: string, markerId: string, media: MarkerMedia) {
-  const current = editable(userId, markerId), stored = current.media.find(item => item.id === media.id);
+  const current = editable(userId, markerId), stored = current.media.find((item): item is MarkerMedia => item.id === media.id && item.kind === 'photo');
   if (!stored) return;
   await FileSystem.deleteAsync(markerMediaUri(userId, stored), { idempotent: true });
   const refreshed = editable(userId, markerId);

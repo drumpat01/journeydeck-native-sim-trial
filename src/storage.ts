@@ -200,9 +200,11 @@ export function importNativeRecorderInbox(snapshot: NativeRecorderInboxExport): 
       for (const marker of session.markers ?? []) {
         if (!validCapturedMarker(marker, session.startedAt, session.endedAt)) throw new Error('Invalid native marker payload.');
         const inserted = db.runSync(`INSERT OR IGNORE INTO local_journey_markers(
-          id,user_id,session_id,root_journey_id,captured_at,location_at,latitude,longitude,accuracy_meters
-        ) VALUES(?,?,?,?,?,?,?,?,?);`, marker.id, ownerUserId, session.id, archivedJourneyIdForSession(session.id),
-        marker.capturedAt, marker.locationAt, marker.latitude, marker.longitude, marker.accuracyMeters);
+          id,user_id,session_id,root_journey_id,captured_at,location_at,latitude,longitude,accuracy_meters,
+          synced_to_cloud,sync_revision,created_at,updated_at
+        ) VALUES(?,?,?,?,?,?,?,?,?,0,1,?,?);`, marker.id, ownerUserId, session.id, archivedJourneyIdForSession(session.id),
+        marker.capturedAt, marker.locationAt, marker.latitude, marker.longitude, marker.accuracyMeters,
+        marker.capturedAt, marker.capturedAt);
         importedMarkers ||= inserted.changes > 0;
       }
       const importedRoute = db.getFirstSync<{ pointCount: number; nextPointSequence: number }>(`
