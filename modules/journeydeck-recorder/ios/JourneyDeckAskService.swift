@@ -207,8 +207,10 @@ public final class JourneyDeckAskService: NSObject {
       }
       guard available, generation == lockGeneration else { return failure("Unlock this device and ask again.") }
       if savedPlan == nil, result.0["status"] as? String == "clarify" {
+        let owner = result.1, epoch = result.2
+        let previous = previousTicket.flatMap { $0.userID == owner && $0.epoch == epoch ? $0.context : nil }
         let current = try AskArchive().profile()
-        guard current.id == result.1 && current.epoch == result.2 else { throw AskFailure.profileChanged }
+        guard current.id == owner && current.epoch == epoch else { throw AskFailure.profileChanged }
         let context = result.0["modelContext"] ?? NSNull()
         let contextData = try JSONSerialization.data(withJSONObject: context, options: [.fragmentsAllowed, .sortedKeys])
         let proposed: [String: Any]?
@@ -225,8 +227,6 @@ public final class JourneyDeckAskService: NSObject {
           return result.0
         }
         guard available, generation == lockGeneration else { return failure("Unlock this device and ask again.") }
-        let owner = result.1, epoch = result.2
-        let previous = previousTicket.flatMap { $0.userID == owner && $0.epoch == epoch ? $0.context : nil }
         // Read fresh rows AFTER inference. The model never receives an archive snapshot.
         result = try await withCheckedThrowingContinuation { continuation in
           queue.async {
