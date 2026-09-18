@@ -101,9 +101,27 @@ jobs:
           [ -n "$WORKSPACE" ]
           SCHEME=$(basename "$WORKSPACE" .xcworkspace)
           xcodebuild -version
+          set +e
           xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release \
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/JourneyDeckV3.xcarchive" \
             -derivedDataPath "$RUNNER_TEMP/JourneyDeckDerivedData" -quiet archive
+          ARCHIVE_STATUS=$?
+          set -e
+          APP=$(find "$RUNNER_TEMP/JourneyDeckV3.xcarchive/Products/Applications" -maxdepth 1 -name '*.app' -print -quit 2>/dev/null || true)
+          WATCH=''
+          if [ -n "$APP" ]; then
+            WATCH=$(find "$APP/Watch" -maxdepth 1 -name '*.app' -print -quit 2>/dev/null || true)
+          fi
+          if [ -z "$APP" ] || [ -z "$WATCH" ]; then
+            echo "Archive is incomplete after xcodebuild exited with status $ARCHIVE_STATUS" >&2
+            if [ "$ARCHIVE_STATUS" -ne 0 ]; then exit "$ARCHIVE_STATUS"; else exit 1; fi
+          fi
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")" = 'com.journeydeck.recorder.v3' ]
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$WATCH/Info.plist")" = 'com.journeydeck.recorder.v3.watchkitapp' ]
+          codesign --verify --deep --strict "$APP"
+          if [ "$ARCHIVE_STATUS" -ne 0 ]; then
+            echo "::warning::Xcode 27 returned status $ARCHIVE_STATUS after producing a complete, signed V3 app and Watch archive; continuing to export validation."
+          fi
       - name: Export and encrypt installation file
         working-directory: ${{ env.MOBILE_DIR }}
         env:

@@ -40,6 +40,10 @@ test('device workflow is manual, public standard runner only, and exports only a
   assert.equal(w.jobs.build['runs-on'], 'xcode-27');
   assert.match(w.jobs.build.if, /private == false/);
   assert.doesNotMatch(text, /eas build|simctl|serve-sim|\.p12\s*\n.*upload/);
+  assert.match(text, /ARCHIVE_STATUS=\$\?/);
+  assert.match(text, /JourneyDeckV3\.xcarchive\/Products\/Applications/);
+  assert.match(text, /com\.journeydeck\.recorder\.v3\.watchkitapp/);
+  assert.match(text, /codesign --verify --deep --strict/);
   const upload = w.jobs.build.steps.find((s: any) => s.uses?.startsWith('actions/upload-artifact'));
   assert.match(upload.with.path, /JourneyDeckEncrypted/);
   assert.equal(upload.with['retention-days'], 1);
