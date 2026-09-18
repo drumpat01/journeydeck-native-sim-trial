@@ -47,13 +47,29 @@ def validate_profile(profile, bundle, device=None):
     if bundle == MAIN:
         if 'iCloud.' + MAIN not in entitlements.get('com.apple.developer.icloud-container-identifiers', []):
             raise ValueError('The V3 CloudKit container is missing from the profile')
-        if 'CloudKit' not in entitlements.get('com.apple.developer.icloud-services', []):
+        services = entitlements.get('com.apple.developer.icloud-services', [])
+        if isinstance(services, str):
+            services = [services]
+        # Profiles are entitlement allowlists; Apple may authorize all iCloud
+        # services with '*', while the app still claims CloudKit explicitly.
+        if 'CloudKit' not in services and '*' not in services:
             raise ValueError('CloudKit is missing from the app profile')
+        cloudkit_environment(profile)
         if 'Default' not in entitlements.get('com.apple.developer.applesignin', []):
             raise ValueError('Sign in with Apple is missing from the app profile')
     if not re.fullmatch(r'[A-Fa-f0-9-]{36}', profile.get('UUID', '')):
         raise ValueError('Invalid profile UUID')
     return team
+
+
+def cloudkit_environment(profile):
+    allowed = profile.get('Entitlements', {}).get('com.apple.developer.icloud-container-environment', [])
+    if isinstance(allowed, str):
+        allowed = [allowed]
+    if 'Production' not in allowed and '*' not in allowed:
+        raise ValueError('The profile must authorize the existing Production CloudKit environment')
+    # ExportOptions requires one string, not the profile's array of allowed values.
+    return 'Production'
 
 
 def run(*args):
@@ -98,7 +114,7 @@ def install(directory):
             shutil.copyfile(directory / (('app' if bundle == MAIN else 'watch') + '.mobileprovision'), folder / (uuid + '.mobileprovision'))
     settings = {'team': next(iter(teams)), 'identity': next(iter(identities)), 'profiles': mapping}
     (directory / 'settings.json').write_text(json.dumps(settings))
-    environment = profiles[MAIN]['Entitlements'].get('com.apple.developer.icloud-container-environment', 'Production')
+    environment = cloudkit_environment(profiles[MAIN])
     with (directory / 'ExportOptions.plist').open('wb') as output:
         plistlib.dump({'method': 'release-testing', 'teamID': settings['team'], 'signingStyle': 'manual',
                       'signingCertificate': settings['identity'], 'provisioningProfiles': mapping,

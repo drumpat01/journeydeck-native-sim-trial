@@ -19,10 +19,22 @@ class SigningTests(unittest.TestCase):
                     'get-task-allow': False,
                     'com.apple.developer.icloud-container-identifiers': ['iCloud.' + signing.MAIN],
                     'com.apple.developer.icloud-services': ['CloudKit'],
+                    'com.apple.developer.icloud-container-environment': ['Production', 'Development'],
                     'com.apple.developer.applesignin': ['Default']}}
 
     def test_correct_profile(self):
         self.assertEqual(signing.validate_profile(self.profile(), signing.MAIN, 'SYNTHETIC-DEVICE'), 'ABCDEFGHIJ')
+
+    def test_apple_wildcard_service_and_environment_allowlists(self):
+        for services in ['*', ['*'], ['CloudKit']]:
+            profile = self.profile()
+            profile['Entitlements']['com.apple.developer.icloud-services'] = services
+            self.assertEqual(signing.validate_profile(profile, signing.MAIN, 'SYNTHETIC-DEVICE'), 'ABCDEFGHIJ')
+            self.assertEqual(signing.cloudkit_environment(profile), 'Production')
+        for allowed in ['Production', ['Production', 'Development'], '*']:
+            profile = self.profile()
+            profile['Entitlements']['com.apple.developer.icloud-container-environment'] = allowed
+            self.assertEqual(signing.cloudkit_environment(profile), 'Production')
 
     def test_reject_wrong_device_identity_expiry_and_distribution(self):
         base = self.profile()
@@ -34,6 +46,8 @@ class SigningTests(unittest.TestCase):
                 signing.validate_profile(profile, signing.MAIN, 'SYNTHETIC-DEVICE')
         for key, value in [('application-identifier', 'ABCDEFGHIJ.com.journeydeck.recorder'),
                            ('get-task-allow', True), ('com.apple.developer.icloud-container-identifiers', []),
+                           ('com.apple.developer.icloud-services', ['CloudDocuments']),
+                           ('com.apple.developer.icloud-container-environment', ['Development']),
                            ('com.apple.developer.applesignin', [])]:
             profile = copy.deepcopy(base); profile['Entitlements'][key] = value
             with self.assertRaises(ValueError):
