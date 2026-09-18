@@ -25,6 +25,55 @@
   const unavailable = () => reply('unavailable', 'Some local history could not be read completely. Open JourneyDeck and try again.');
   const finite = n => typeof n === 'number' && Number.isFinite(n) && n >= 0;
   const textFilter = s => typeof s === 'string' && s.length <= 160 && !/[\x00-\x1f]/.test(s);
+  function normalizeModelPlan(question, raw, hasPriorContext = false) {
+    if (typeof question !== 'string' || question.length > 500 || !raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    const p = Object.assign({}, defaults, raw), q = question.toLowerCase().replace(/[’']/g, "'").replace(/\s+/g, ' ').trim();
+    // Guided generation can populate constrained fields even when they are irrelevant.
+    // Canonicalize only fields whose meaning is determined by another selected field.
+    if (p.period !== 'lastDays') p.days = 0;
+    if (p.period === 'date') p.endDate = '';
+    else if (p.period !== 'between') { p.startDate = ''; p.endDate = ''; }
+    if (p.operation !== 'compare') p.comparePeriod = 'none';
+    if (p.operation !== 'rank') p.groupBy = 'none';
+    if (p.domain === 'music' && p.metric === 'songPlays') p.metric = 'count';
+    if (p.operation === 'rank' && /\b(?:top|number one|#\s*1|most recorded|most played|most listened)\b/.test(q)) p.limit = 1;
+    if (!hasPriorContext) p.selection = 'history';
+
+    const unsupported = /\b(?:delete|erase|remove all|start recording|stop recording|create (?:a )?marker|email|send|share)\b|\b(?:note|notes|transcript|transcripts|engine temperature|fuel|gas)\b|\bphotos? (?:containing|showing|with)\b|\b(?:color|colour) (?:were|was|are|is)\b|\broute(?:s)? (?:crossed|crossing)\b|\b(?:excluding|except|without)\b/;
+    const ambiguous = /\b(?:best|most fun|favorite|favourite)\b|\bbiggest one\b/;
+    const domains = {
+      journeys: /\b(?:journey|journeys|trip|trips|drive|drives|driving|mile|miles|mileage|distance|minutes?|duration)\b/,
+      music: /\b(?:music|soundtrack|song|songs|track|tracks|artist|artists|album|albums|play|plays|played|listen|listened)\b/,
+      memories: /\b(?:memory|memories)\b/,
+      markers: /\bmarkers?\b/,
+      places: /\b(?:arrival|arrivals|arrive|arrived|ending at|ended at|end at|work|home)\b/,
+    };
+    const operations = {
+      total: /\b(?:how many|what is my|total|count|number of|sum|add|add up|how often)\b|^(?:miles|mileage|distance|minutes|photos?|voice memos?)\b/,
+      average: /\b(?:average|mean)\b/,
+      latest: /\b(?:latest|last|most recent)\b/,
+      first: /\bfirst\b/,
+      largest: /\b(?:longest|most miles|highest mileage|largest)\b/,
+      smallest: /\b(?:shortest|least mileage|lowest mileage|smallest)\b/,
+      list: /\b(?:list|show)\b/,
+      rank: /\b(?:top|rank|number one|most played|most listened|most recorded)\b/,
+      compare: /\b(?:compare|versus|vs\.?|difference)\b/,
+    };
+    const metrics = {
+      count: /./,
+      miles: /\b(?:mile|miles|mileage|distance|how far)\b/,
+      minutes: /\b(?:minute|minutes|drive time|driving time|duration)\b/,
+      songPlays: /\b(?:song|songs|music|play|plays)\b/,
+      photos: /\bphotos?\b/,
+      voiceMemos: /\bvoice memos?\b/,
+    };
+    const followUp = hasPriorContext && /^(?:and |what about |how about )/.test(q);
+    if (ambiguous.test(q)) p.decision = 'clarify';
+    else if (unsupported.test(q)) p.decision = 'unsupported';
+    else if ((followUp || domains[p.domain]?.test(q)) && operations[p.operation]?.test(q) && metrics[p.metric]?.test(q)) p.decision = 'answer';
+    else p.decision = p.decision === 'clarify' ? 'clarify' : 'unsupported';
+    return p;
+  }
   function validate(raw, issues) {
     const fail = reason => { if (issues) issues.push(reason); return null; };
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return fail('plan must be an object');
@@ -228,7 +277,7 @@
         title: 'Memory created ' + date(Date.parse(m.createdAt)), summary: 'Saved Memory' })),
     ].sort((a, b) => Date.parse(b.date) - Date.parse(a.date) || String(a.id).localeCompare(String(b.id))).slice(0, 500);
   }
-  const api = { choices, defaults, validate, range, execute, modelContext, entities };
+  const api = { choices, defaults, normalizeModelPlan, validate, range, execute, modelContext, entities };
   if (typeof module !== 'undefined') module.exports = api;
   root.JourneyDeckQueryEngine = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -74,6 +74,7 @@ export function SiriTestingScreen() {
         <Text selectable style={{ color: c.muted }}>{result.detail}</Text>
         {result.answer && <Text selectable style={{ color: c.text }}>{result.answer}</Text>}
         {result.status === 'failed' && (result.proposedPlan || result.plan) && <Text selectable style={{ color: c.muted, fontSize: 12 }}>Generated query: {JSON.stringify(result.proposedPlan ?? result.plan)}</Text>}
+        {result.status === 'failed' && result.normalizedPlan && <Text selectable style={{ color: c.muted, fontSize: 12 }}>Validated query: {JSON.stringify(result.normalizedPlan)}</Text>}
         {result.status === 'failed' && result.expectedPlan && <Text selectable style={{ color: c.muted, fontSize: 12 }}>Expected query: {JSON.stringify(result.expectedPlan)}</Text>}
       </View>)}
       <Text style={{ color: c.muted, fontSize: 13, lineHeight: 20 }}>This checks the same planner and executor used by Ask JourneyDeck. Siri invocation, spoken replies, microphone behavior, and lock-screen access require separate phone tests. Results clear when you leave or background this screen.</Text>

@@ -59,8 +59,9 @@
   }
   function grade(id, raw) {
     const validationErrors = [];
-    const item = cases.find(c => c.id === id), actual = engine.validate(raw, validationErrors);
+    const item = cases.find(c => c.id === id);
     if (!item) return { status: 'failed', detail: 'Unknown evaluation case.' };
+    const normalized = engine.normalizeModelPlan(item.question, raw, false), actual = engine.validate(normalized, validationErrors);
     const expected = engine.validate(item.plan), differences = [];
     if (!actual) differences.push('invalid plan: ' + validationErrors.join('; '));
     else if (expected.decision !== 'answer') {
@@ -68,14 +69,14 @@
     } else for (const key of Object.keys(expected)) {
       if (actual[key] !== expected[key]) differences.push(key + ': expected ' + JSON.stringify(expected[key]) + ', got ' + JSON.stringify(actual[key]));
     }
-    const answer = engine.execute(raw, fixture(), null);
+    const answer = engine.execute(normalized, fixture(), null);
     if (expected.decision === 'answer') {
       if (answer.status !== 'answered') differences.push('no computed answer');
       for (const [key, value] of Object.entries(item.facts)) if (JSON.stringify(answer.facts && answer.facts[key]) !== JSON.stringify(value)) differences.push('wrong fact: ' + key);
     } else if (answer.status === 'answered') differences.push('unsafe answer');
     return { status: differences.length ? 'failed' : 'passed', question: item.question,
       detail: differences.join('; ') || 'Plan and calculated facts match.', plan: actual,
-      proposedPlan: raw, expectedPlan: expected, validationErrors, answer: answer.text };
+      proposedPlan: raw, normalizedPlan: normalized, expectedPlan: expected, validationErrors, answer: answer.text };
   }
   const api = { fixture, cases, list, prepare, grade };
   if (typeof module !== 'undefined') module.exports = api;

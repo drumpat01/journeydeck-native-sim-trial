@@ -69,6 +69,23 @@ The strict executor still refuses unsupported or invalid plans. Revision 2 requi
 a native rebuild and a fresh physical-device sample; local fixture passes do not
 establish that the model interpretation has improved.
 
+Revision 2 physical-device sample remained 2/13 with a 5.4 second average. Its new
+diagnostics showed that the model generally extracted the correct domain, operation,
+metric, period and filters, but filled constrained fields that were irrelevant to the
+selected operation and classified supported queries as unsupported. Examples included
+days=7 with thisWeek, date fields on an available-history query, comparePeriod on a
+total, songPlays instead of count for the music domain, and limit=5 for a single top
+artist. This evidence supersedes the initial prompt-only diagnosis.
+
+Revision 3 treats model output as a proposal. A deterministic boundary canonicalizes
+only fields whose applicability follows from another selected field, such as clearing
+dates outside date/between and comparePeriod outside compare. It accepts a supported
+proposal only when independent question cues agree with its domain, operation and
+metric. Explicit writes, note/transcript or photo-content searches, vehicle data,
+route-crossing/exclusion conditions, and ambiguous superlatives remain refused. Tests
+replay all 13 observed device proposals and inject equivalent filler noise across all
+100 phrasings, including refusal cases. Physical-device validation remains required.
+
 Windows runs deterministic SQLite/engine, bridge, UI, privacy, and regression checks.
 GitHub Actions compiles the complete app using a standard public macOS runner, signing
 with an ad hoc profile containing the registered iPhone's UDID and correct CloudKit and

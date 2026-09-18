@@ -43,7 +43,7 @@ private struct JourneyDeckQueryPlan {
 /// A fresh model session per question prevents stale account data or unbounded transcripts.
 @MainActor
 enum JourneyDeckAIPlanner {
-  static let revision = 2
+  static let revision = 3
   private static var busy = false
   private static var active: Task<[String: Any], Error>?
   static func cancel() { active?.cancel() }

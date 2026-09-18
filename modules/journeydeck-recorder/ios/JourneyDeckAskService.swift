@@ -212,7 +212,11 @@ public final class JourneyDeckAskService: NSObject {
         let context = result.0["modelContext"] ?? NSNull()
         let contextData = try JSONSerialization.data(withJSONObject: context, options: [.fragmentsAllowed, .sortedKeys])
         let proposed: [String: Any]?
-        do { proposed = try await JourneyDeckAIPlanner.plan(question: question, context: String(decoding: contextData, as: UTF8.self), now: now) }
+        do {
+          if let raw = try await JourneyDeckAIPlanner.plan(question: question, context: String(decoding: contextData, as: UTF8.self), now: now) {
+            proposed = try Self.engine("normalizeModelPlan", arguments: [question, raw, previous != nil]) as? [String: Any]
+          } else { proposed = nil }
+        }
         catch is CancellationError { throw CancellationError() }
         catch { throw AskFailure.interpretation }
         guard let plan = proposed else {

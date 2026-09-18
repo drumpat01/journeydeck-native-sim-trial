@@ -3,7 +3,7 @@ import { isInternalTestingBuild } from './internal-testing';
 import { V3_ASK_JOURNEYDECK_ENABLED } from './release-features';
 
 export type SiriTestCase = { id: string; question: string };
-export type SiriTestResult = { status: 'passed' | 'failed' | 'unavailable' | 'cancelled'; detail: string; question?: string; elapsedMs?: number; answer?: string; plan?: Record<string, unknown> | null; proposedPlan?: Record<string, unknown>; expectedPlan?: Record<string, unknown>; validationErrors?: string[] };
+export type SiriTestResult = { status: 'passed' | 'failed' | 'unavailable' | 'cancelled'; detail: string; question?: string; elapsedMs?: number; answer?: string; plan?: Record<string, unknown> | null; proposedPlan?: Record<string, unknown>; normalizedPlan?: Record<string, unknown>; expectedPlan?: Record<string, unknown>; validationErrors?: string[] };
 export type SiriAIStatus = { model: string; testing: boolean; engineVersion: number; plannerRevision?: number; timeoutSeconds: number };
 type NativeTesting = {
   journeyDeckAIStatusAsync?: () => Promise<SiriAIStatus>;
