@@ -10,6 +10,7 @@ import { getCurrentUser } from './auth';
 import { US_STATES_MAP_VIEW_BOX, US_STATES_MAP_ASPECT_RATIO, US_STATE_PATHS } from './fifty-states-map-data';
 import { filterUSStates, US_STATES, type FiftyStatesFilter, type USStateCode } from './fifty-states-model';
 import { useFiftyStates } from './fifty-states-store';
+import { MedallionArtworkImage } from './medallion-artwork-image';
 import { V3_FIFTY_STATES_ENABLED } from './release-features';
 import { haptics } from './haptics';
 
@@ -67,7 +68,7 @@ export function FiftyStatesScreen() {
   const insets = useSafeAreaInsets();
   const { width, fontScale } = useWindowDimensions();
   const userId = getCurrentUser().id;
-  const { seen, toggle, reset } = useFiftyStates(userId);
+  const { seen, completedAt, toggle, reset } = useFiftyStates(userId);
   const [filter, setFilter] = useState<FiftyStatesFilter>('all');
   const states = useMemo(() => filterUSStates(seen, filter), [filter, seen]);
   const selected = useMemo(() => new Set(seen), [seen]);
@@ -81,17 +82,25 @@ export function FiftyStatesScreen() {
       <View style={styles.header}><Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} style={[styles.iconButton, { backgroundColor: theme.palette.card, borderColor: theme.palette.line }]}><SymbolView name="chevron.left" tintColor={theme.palette.text} size={20} /></Pressable><View style={styles.headerCopy}><Text accessibilityRole="header" style={[styles.title, { color: theme.palette.text }]}>50 States</Text><Text style={[styles.subtitle, { color: theme.palette.accent }]}>Different roads. A bigger story.</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Reset 50 States checklist" onPress={() => Alert.alert('Reset all 50 states?', 'This clears every checked state for this JourneyDeck profile.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Reset', style: 'destructive', onPress: reset }])} style={[styles.iconButton, { backgroundColor: theme.palette.card, borderColor: theme.palette.line }]}><SymbolView name="arrow.counterclockwise" tintColor={theme.palette.muted} size={19} /></Pressable></View>
       <View style={[styles.mapCard, { backgroundColor: theme.palette.card, borderColor: theme.palette.line }]}><FiftyStatesMap seen={seen} onToggle={toggleState} /></View>
       <View style={[styles.statsCard, { backgroundColor: theme.palette.card, borderColor: theme.palette.line }]}><View style={styles.statsMain}><Text style={[styles.statsLabel, { color: theme.palette.muted }]}>States Spotted</Text><Text style={[styles.statsValue, { color: theme.palette.text }]}><Text style={{ color: theme.palette.accent }}>{seen.length}</Text> of 50</Text><View style={[styles.progressTrack, { backgroundColor: theme.palette.inset }]}><View style={[styles.progressFill, { width: `${seen.length * 2}%`, backgroundColor: theme.palette.accent }]} /></View></View><View style={styles.statsSide}><View><Text style={[styles.statsCount, { color: theme.palette.text }]}>{seen.length}</Text><Text style={[styles.statsSideLabel, { color: theme.palette.muted }]}>Seen</Text></View><View style={[styles.statsDivider, { backgroundColor: theme.palette.line }]} /><View><Text style={[styles.statsCount, { color: theme.palette.text }]}>{remaining}</Text><Text style={[styles.statsSideLabel, { color: theme.palette.muted }]}>Remaining</Text></View></View></View>
+      {completedAt ? <View testID="fifty-states-medallion-earned" accessibilityLiveRegion="polite" style={[styles.awardCard, { backgroundColor: theme.palette.card, borderColor: theme.palette.accent }]}>
+        <MedallionArtworkImage achievementId="all-fifty" themeId={theme.id} label="All 50 medallion earned" style={{ width: 108, height: 108 }} />
+        <Text accessibilityRole="header" style={[styles.awardTitle, { color: theme.palette.text }]}>All 50. A collection complete.</Text>
+        <Text style={[styles.awardCopy, { color: theme.palette.muted }]}>Your All 50 medallion is now in Medallions. Earned {new Date(completedAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}. It stays yours when you start a new checklist.</Text>
+      </View> : null}
       <View accessibilityRole="tablist" style={[styles.filters, { backgroundColor: theme.palette.card, borderColor: theme.palette.line }]}>{FILTERS.map(item => <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{ selected: filter === item.id }} onPress={() => setFilter(item.id)} style={[styles.filter, filter === item.id && { backgroundColor: theme.palette.accent }]}><Text style={[styles.filterText, { color: filter === item.id ? theme.palette.onAccent : theme.palette.text }]}>{item.label}</Text></Pressable>)}</View>
       <View style={styles.stateGrid}>{states.map(([code, name]) => {
         const checked = selected.has(code);
         return <View key={code} style={{ width: `${100 / columns}%`, padding: 5 }}><Pressable accessibilityRole="checkbox" accessibilityState={{ checked }} accessibilityLabel={`${name}, ${checked ? 'seen' : 'not seen'}`} accessibilityHint="Double tap to change this state" onPress={() => toggleState(code)} style={({ pressed }) => [styles.stateCard, { backgroundColor: checked ? theme.palette.inset : theme.palette.card, borderColor: checked ? theme.palette.accent : theme.palette.line }, pressed && styles.pressed]}><View style={styles.stateCardTop}><Text style={[styles.stateCode, { color: theme.palette.text }]}>{code}</Text><View style={[styles.check, { backgroundColor: checked ? theme.palette.accent : 'transparent', borderColor: checked ? theme.palette.accent : theme.palette.muted }]}>{checked && <SymbolView name="checkmark" tintColor={theme.palette.onAccent} size={12} weight="bold" />}</View></View><Text numberOfLines={2} style={[styles.stateName, { color: checked ? theme.palette.text : theme.palette.muted }]}>{name}</Text></Pressable></View>;
       })}</View>
-      <Text style={[styles.safety, { color: theme.palette.muted }]}>Update this checklist only while parked or as a passenger. JourneyDeck stores only the checked states—never a plate number, image, vehicle identity, or sighting location.</Text>
+      <Text style={[styles.safety, { color: theme.palette.muted }]}>Update this checklist only while parked or as a passenger. JourneyDeck stores checked states and your completion date privately on this device—never a plate number, image, vehicle identity, or sighting location.</Text>
     </ScrollView>
   </View>;
 }
 
 const styles = StyleSheet.create({
+  awardCard: { borderRadius: 24, borderWidth: 1, padding: 20, gap: 12, alignItems: 'center' },
+  awardTitle: { fontFamily: 'Georgia', fontSize: 24, textAlign: 'center' },
+  awardCopy: { fontSize: 14, lineHeight: 21, textAlign: 'center', maxWidth: 520 },
   screen: { flex: 1 }, content: { paddingHorizontal: 16, gap: 14 }, unavailable: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 18, padding: 24 },
   header: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 12 }, headerCopy: { flex: 1 }, title: { fontFamily: 'Georgia', fontSize: 34, fontWeight: '700' }, subtitle: { fontSize: 14, marginTop: 2 },
   iconButton: { width: 44, height: 44, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },

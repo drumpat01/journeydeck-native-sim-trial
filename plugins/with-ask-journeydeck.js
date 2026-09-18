@@ -13,7 +13,11 @@ function addIntentSource(project, projectName) {
 
 module.exports = config => {
   if (config.ios?.bundleIdentifier !== 'com.journeydeck.recorder.v3' || config.extra?.features?.askJourneyDeck !== true) return config;
-  config = withInfoPlist(config, mod => { mod.modResults.JourneyDeckAskEnabled = true; return mod; });
+  config = withInfoPlist(config, mod => {
+    mod.modResults.JourneyDeckAskEnabled = true;
+    mod.modResults.JourneyDeckSiriTestingEnabled = process.env.EXPO_PUBLIC_JOURNEYDECK_INTERNAL_TESTING === '1';
+    return mod;
+  });
   config = withDangerousMod(config, ['ios', async mod => {
     const destination = path.join(mod.modRequest.platformProjectRoot, mod.modRequest.projectName);
     fs.mkdirSync(destination, { recursive: true });

@@ -14,6 +14,25 @@ export const US_STATES = [
 export type USStateCode = typeof US_STATES[number][0];
 export type FiftyStatesFilter = 'all' | 'seen' | 'remaining';
 
+export type FiftyStatesProgress = { seen: USStateCode[]; completedAt: string | null };
+const validTimestamp = (value: unknown): value is string => typeof value === 'string' && Number.isFinite(Date.parse(value));
+
+/** Older complete checklists use their last saved date; never invent an earning date. */
+export function normalizeFiftyStatesProgress(value: unknown): FiftyStatesProgress {
+  const stored = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  const seen = normalizeSeenStates(stored.seen);
+  const completedAt = validTimestamp(stored.completedAt) ? stored.completedAt
+    : seen.length === US_STATES.length && validTimestamp(stored.updatedAt) ? stored.updatedAt : null;
+  return { seen, completedAt };
+}
+
+export function updateFiftyStatesProgress(previous: unknown, value: unknown, now: string) {
+  const seen = normalizeSeenStates(value);
+  const completedAt = normalizeFiftyStatesProgress(previous).completedAt
+    ?? (seen.length === US_STATES.length && validTimestamp(now) ? now : null);
+  return { seen, completedAt, updatedAt: now };
+}
+
 const stateCodes = new Set<string>(US_STATES.map(([code]) => code));
 const stateOrder = new Map<string, number>(US_STATES.map(([code], index) => [code, index]));
 

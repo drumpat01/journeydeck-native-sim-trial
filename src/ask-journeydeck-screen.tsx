@@ -6,6 +6,7 @@ import { useAppTheme } from './app-theme';
 import { getCurrentUser } from './auth';
 import { ASK_EXAMPLES, askJourneyDeck, isAskJourneyDeckAvailable, resolveJourneyDeckAnswer, type AskAnswer, type AskEvidence } from './ask-journeydeck';
 import { V3_ASK_JOURNEYDECK_ENABLED } from './release-features';
+import { canShowSiriTesting } from './siri-testing';
 
 export function AskJourneyDeckScreen() {
   const theme = useAppTheme(), c = theme.palette, userID = getCurrentUser().id;
@@ -95,7 +96,10 @@ export function AskJourneyDeckScreen() {
           <Text style={{ color: c.accent, fontSize: 15 }}>{example}</Text>
         </Pressable>)}
       </View>
-      <Text style={{ color: c.muted, fontSize: 12, lineHeight: 18 }}>This English-language prototype supports specific history questions and common date ranges. It omits locations and Memory titles. JourneyDeck does not save your questions. Typed questions work offline. Siri requires iOS 26 or later and follows your Apple settings. Say “Ask JourneyDeck V3.” Your device must be unlocked.</Text>
+      <Text style={{ color: c.muted, fontSize: 12, lineHeight: 18 }}>Apple Intelligence interprets supported English questions about journeys, music, Memories, markers, and recorded arrivals. JourneyDeck calculates each answer from your local history. Notes, photo contents, and voice transcripts are not searchable yet. Simple questions also work without Apple Intelligence. Questions are not saved. Siri follows your Apple settings; say “Ask JourneyDeck V3.” Your device must be unlocked.</Text>
+      {canShowSiriTesting && <Pressable accessibilityRole="button" onPress={() => router.push('/siri-testing')} style={{ minHeight: 48, justifyContent: 'center' }}>
+        <Text style={{ color: c.accent, fontSize: 16 }}>Open Siri AI testing ›</Text>
+      </Pressable>}
     </>}
   </ScrollView>;
 }

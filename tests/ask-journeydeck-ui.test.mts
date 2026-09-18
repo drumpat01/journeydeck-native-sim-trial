@@ -43,6 +43,7 @@ async function screen(options: { available?: boolean; enabled?: boolean; ticket?
       useFocusEffect: (callback: () => () => void) => React.useEffect(() => { blur = callback(); return blur; }, [callback]),
     },
     './app-theme': { useAppTheme: () => testTheme('grand-touring') },
+    './siri-testing': { canShowSiriTesting: false },
     './auth': { getCurrentUser: () => ({ id: userID }) },
     './release-features': { V3_ASK_JOURNEYDECK_ENABLED: options.enabled !== false },
     './ask-journeydeck': {

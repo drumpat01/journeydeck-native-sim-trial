@@ -35,12 +35,12 @@ test('the approved medallions are backed by a pinned Minted native module', asyn
   assert.match(swift, /Drag left or right to rotate the medallion/);
 });
 
-test('all 40 theme faces stay in the OTA artwork catalog instead of the native bundle', async () => {
+test('all 50 theme faces stay in the OTA artwork catalog instead of the native bundle', async () => {
   const ids = ['first-track', 'long-way-home', 'thousand-mile', 'grand-tourer', 'first-note', 'long-play', 'soundtrack-100', 'memory-maker', 'picture-this', 'story-collector'];
-  const themes = ['redline', 'sakura', 'dark', 'light'];
+  const themes = ['redline', 'sakura', 'dark', 'light', 'midnight-canopy'];
   const frames = JSON.parse(await read('assets/medallions-v2/frames.json'));
   const catalog = await read('src/medallion-artwork.ts');
-  assert.equal(Object.keys(frames).length, 40);
+  assert.equal(Object.keys(frames).length, 50);
   for (const id of ids) for (const theme of themes) {
     const key = id + '-' + theme;
     const original = await readFile(new URL('assets/medallions-v2/' + key + '.png', projectRoot));

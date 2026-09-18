@@ -20,7 +20,9 @@ test('Autumn map has its own cached style and theme-colored route without modify
   assert.equal(autumn?.layers[3]?.filter, input.layers[3]?.filter);
   assert.equal(autumn?.sources, input.sources);
   assert.equal(autumn?.layers[4]?.paint?.['text-color'], p.text);
-  assert.deepEqual(journeyDeckMapPalette('midnight-canopy'), { routeGlow: p.glow, routeShadow: p.inset, routeLine: p.accent });
+  assert.deepEqual(journeyDeckMapPalette('midnight-canopy'), { routeGlow: '#ff7600', routeShadow: '#590000', routeLine: '#fff200' });
+  assert.equal(autumn?.layers[2]?.paint?.['fill-outline-color'], '#00f0d0');
+  assert.equal(autumn?.layers[3]?.paint?.['line-color'], '#ffd000');
   assert.equal(await loadJourneyDeckMapStyle(fetcher, 'dark'), dark);
 });
 

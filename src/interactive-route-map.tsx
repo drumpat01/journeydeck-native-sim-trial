@@ -331,7 +331,7 @@ export function InteractiveRouteMap({
         {markers.filter(marker => !replayEngaged || Date.parse(marker.capturedAt) <= replayTimestamp).map((marker, index) => <Marker
           id={`saved-marker-${marker.id}`} key={marker.id} lngLat={[marker.longitude, marker.latitude]} anchor="bottom"
           onPress={event => { event.stopPropagation(); settleReplay(); onSelectMarker?.(marker); }}>
-          <View accessibilityLabel={`Saved marker ${index + 1}`} style={{ width: 38, height: 44, borderRadius: 6, borderWidth: 2, borderColor: theme.palette.accent, backgroundColor: theme.palette.card, alignItems: 'center', justifyContent: 'center' }}>
+          <View accessibilityLabel={`Saved marker ${index + 1}`} style={{ width: 38, height: 44, borderRadius: 6, borderWidth: 2, borderColor: mapPalette.routeLine, backgroundColor: theme.palette.card, alignItems: 'center', justifyContent: 'center', shadowColor: mapPalette.routeGlow, shadowOpacity: 0.95, shadowRadius: 9, shadowOffset: { width: 0, height: 0 } }}>
             <SymbolView name="photo" tintColor={theme.palette.accent} size={24} />
           </View>
         </Marker>)}

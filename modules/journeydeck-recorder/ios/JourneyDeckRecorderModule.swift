@@ -1471,6 +1471,19 @@ public final class JourneyDeckRecorderModule: Module {
       await JourneyDeckAskService.shared.resolve(ticket: ticket, expectedUserID: userID)
     }
 
+    AsyncFunction("journeyDeckAIStatusAsync") { () async -> [String: Any] in
+      await JourneyDeckAskService.shared.aiStatus()
+    }
+    AsyncFunction("journeyDeckEvaluationCasesAsync") { () async -> [[String: Any]] in
+      await JourneyDeckAskService.shared.evaluationCases()
+    }
+    AsyncFunction("evaluateJourneyDeckCaseAsync") { (id: String) async -> [String: Any] in
+      await JourneyDeckAskService.shared.evaluateCase(id: id)
+    }
+    AsyncFunction("cancelJourneyDeckEvaluationAsync") { () async in
+      await JourneyDeckAskService.shared.cancelEvaluation()
+    }
+
     Constant("displayLayoutObserverAvailable") { true }
 
     View(JourneyDeckDisplayLayoutObserver.self) {

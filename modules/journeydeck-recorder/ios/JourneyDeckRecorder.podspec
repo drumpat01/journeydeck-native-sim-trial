@@ -15,6 +15,7 @@ Pod::Spec.new do |s|
   s.resource_bundles = { 'JourneyDeckAsk' => ['AskResources/*.{js,json}'] }
   s.libraries = 'sqlite3'
   sdk_version = `xcrun --sdk iphoneos --show-sdk-version 2>/dev/null`.strip
+  s.weak_frameworks = 'FoundationModels' if !sdk_version.empty? && Gem::Version.new(sdk_version) >= Gem::Version.new('26.0')
   duo_sdk = !sdk_version.empty? && Gem::Version.new(sdk_version) >= Gem::Version.new('27.1')
   swift_conditions = '$(inherited)'
   swift_conditions += ' JOURNEYDECK_DUO_RESERVED_REGIONS' if duo_sdk
