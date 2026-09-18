@@ -148,7 +148,7 @@ public final class JourneyDeckAskService: NSObject {
   }
   public func aiStatus() -> [String: Any] {
     ["model": available ? JourneyDeckAIPlanner.availability() : "lockedOrUnavailable",
-     "testing": testingAvailable, "engineVersion": 1, "timeoutSeconds": 30]
+     "testing": testingAvailable, "engineVersion": 1, "plannerRevision": JourneyDeckAIPlanner.revision, "timeoutSeconds": 30]
   }
   private var testingAvailable: Bool {
     available && Bundle.main.object(forInfoDictionaryKey: "JourneyDeckSiriTestingEnabled") as? Bool == true

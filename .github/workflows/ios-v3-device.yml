@@ -116,6 +116,19 @@ jobs:
             -exportPath "$RUNNER_TEMP/JourneyDeckExport" -quiet
           IPA=$(find "$RUNNER_TEMP/JourneyDeckExport" -maxdepth 1 -name '*.ipa' -print -quit)
           [ -n "$IPA" ]
+          export IPA
+          python3 - <<'PY'
+          import os, plistlib, zipfile
+          expected = str(100000 + int(os.environ['GITHUB_RUN_NUMBER']))
+          with zipfile.ZipFile(os.environ['IPA']) as archive:
+              names = [name for name in archive.namelist() if name.startswith('Payload/') and name.endswith('.app/Info.plist')]
+              records = [plistlib.loads(archive.read(name)) for name in names]
+          bundles = {item.get('CFBundleIdentifier'): str(item.get('CFBundleVersion')) for item in records}
+          required = {'com.journeydeck.recorder.v3', 'com.journeydeck.recorder.v3.watchkitapp'}
+          if not required.issubset(bundles) or any(bundles[bundle] != expected for bundle in required):
+              raise SystemExit('Exported app/Watch bundle identity or build number is incorrect')
+          print('Exported V3 app and Watch build numbers verified.')
+          PY
           mkdir -p "$RUNNER_TEMP/JourneyDeckEncrypted"
           openssl enc -aes-256-cbc -salt -pbkdf2 -iter 200000 -md sha256 \
             -pass env:IOS_ARTIFACT_PASSWORD -in "$IPA" \

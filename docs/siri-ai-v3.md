@@ -54,6 +54,21 @@ It reports unavailable, failed and cancelled evaluations separately. No syntheti
 are inserted into the user's archive. Questions/results stay in memory and clear on exit.
 Real archive questions remain in the normal Ask screen with authenticated evidence links.
 
+First physical-device sample (September 18, 2026, planner revision 1): Apple Intelligence
+available, 2/13 passed, 11/13 failed, 4.3 seconds average; first case 6.5 seconds.
+The two passes were unsupported requests. Nine supported questions reported an
+unsupported decision; two reported invalid plans. Most refusal results otherwise
+matched the expected fields. The screenshots do not include the raw invalid plans.
+
+Revision 2 clarifies that decision `answer` authorizes execution by the archive engine,
+not generation of a factual result by the model. It removes the conflicting "Never
+answer it" instruction and generates the decision after the query fields. Metric,
+ranking-limit and unused-field guidance is more explicit. Synthetic failures retain
+the proposed/expected plans and validator reason, shown only in internal testing.
+The strict executor still refuses unsupported or invalid plans. Revision 2 requires
+a native rebuild and a fresh physical-device sample; local fixture passes do not
+establish that the model interpretation has improved.
+
 Windows runs deterministic SQLite/engine, bridge, UI, privacy, and regression checks.
 GitHub Actions compiles the complete app using a standard public macOS runner, signing
 with an ad hoc profile containing the registered iPhone's UDID and correct CloudKit and

@@ -19,6 +19,24 @@ test('resource executes without Node APIs using the same global entry points as 
   assert.equal(vm.runInContext('JourneyDeckEvaluation.list().length', context), 100);
   assert.equal(vm.runInContext('JourneyDeckEvaluation.grade("01-1",{metric:"miles",period:"thisWeek"}).status', context), 'passed');
 });
+
+test('device refusal regressions remain failures and invalid plans retain diagnostic fields', () => {
+  const refusal = suite.grade('01-1', { decision: 'unsupported', metric: 'miles', period: 'thisWeek' });
+  assert.equal(refusal.status, 'failed');
+  assert.equal(refusal.plan.decision, 'unsupported');
+  assert.equal(refusal.expectedPlan.decision, 'answer');
+  assert.equal(engine.execute(refusal.proposedPlan, suite.fixture()).status, 'clarify');
+  const music = suite.grade('11-1', { domain: 'music', metric: 'songPlays' });
+  assert.equal(music.status, 'failed');
+  assert.equal(music.plan, null);
+  assert.equal(music.proposedPlan.metric, 'songPlays');
+  assert.deepEqual(music.validationErrors, ['metric is not supported for domain music']);
+  assert.match(music.detail, /invalid plan: metric/);
+  const dates = suite.grade('25-1', { metric: 'miles', period: 'between', days: 4, startDate: '2026-09-14', endDate: '2026-09-17' });
+  assert.equal(dates.status, 'failed');
+  assert.match(dates.validationErrors[0], /other periods require zero/);
+  // Examples above exercise diagnostics, not a claim to reproduce the unseen raw phone plans.
+});
 test('untrusted plans reject extra instructions, invalid ranges, unsupported metrics and dropped-condition combinations', () => {
   const invalid = [{ sql: 'DELETE FROM local_journeys' }, { version: 3 }, { minMiles: -2 }, { maxMiles: 100001 },
     { minMiles: 10, maxMiles: 5 }, { limit: 0 }, { days: 9999 }, { metric: 'fuel' }, { domain: 'memories', artist: 'Nova' },

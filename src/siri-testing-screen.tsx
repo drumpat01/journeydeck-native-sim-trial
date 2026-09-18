@@ -54,6 +54,7 @@ export function SiriTestingScreen() {
       <Text style={{ color: c.muted, fontSize: 16, lineHeight: 24 }}>Test the on-device question planner against 100 synthetic questions. These tests use invented journeys, music, Memories, and markers. Your saved archive is never changed.</Text>
       <View style={{ padding: 18, gap: 10, backgroundColor: c.card, borderColor: c.line, borderWidth: 1, borderRadius: 18 }}>
         <Text selectable style={{ color: c.text, fontWeight: '600' }}>Apple Intelligence: {status?.model ?? 'Checking…'}</Text>
+        {status && <Text style={{ color: c.muted }}>Planner revision: {status.plannerRevision ?? 1}</Text>}
         <Text style={{ color: c.muted }}>Each test checks interpretation and calculated facts separately. First-use and warm timings are shown per question. Keep the app open during the run.</Text>
         {status?.model === 'newNativeBuildRequired' && <Text style={{ color: c.accent }}>Install the new signed V3 build to use this screen.</Text>}
       </View>
@@ -72,6 +73,8 @@ export function SiriTestingScreen() {
         <Text selectable style={{ color: c.text }}>{result.question}</Text>
         <Text selectable style={{ color: c.muted }}>{result.detail}</Text>
         {result.answer && <Text selectable style={{ color: c.text }}>{result.answer}</Text>}
+        {result.status === 'failed' && (result.proposedPlan || result.plan) && <Text selectable style={{ color: c.muted, fontSize: 12 }}>Generated query: {JSON.stringify(result.proposedPlan ?? result.plan)}</Text>}
+        {result.status === 'failed' && result.expectedPlan && <Text selectable style={{ color: c.muted, fontSize: 12 }}>Expected query: {JSON.stringify(result.expectedPlan)}</Text>}
       </View>)}
       <Text style={{ color: c.muted, fontSize: 13, lineHeight: 20 }}>This checks the same planner and executor used by Ask JourneyDeck. Siri invocation, spoken replies, microphone behavior, and lock-screen access require separate phone tests. Results clear when you leave or background this screen.</Text>
     </>}

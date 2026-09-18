@@ -22,6 +22,15 @@ function configure(project, settings, number) {
   if (matched < 4) throw Error('Expected both V3 app and Watch signing configurations');
 }
 
+function setBundleBuildNumbers(files, number) {
+  if (!Number.isInteger(number) || number < 1 || files.length !== 2) throw Error('Expected app and Watch build-number inputs');
+  for (const file of files) {
+    const info = plist.parse(fs.readFileSync(file, 'utf8'));
+    info.CFBundleVersion = String(number);
+    fs.writeFileSync(file, plist.build(info));
+  }
+}
+
 if (require.main === module) {
   if (process.platform !== 'darwin' || process.env.GITHUB_ACTIONS !== 'true') throw Error('GitHub Mac runner required');
   const settings = JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'journeydeck-signing/settings.json'), 'utf8'));
@@ -29,13 +38,15 @@ if (require.main === module) {
   if (projects.length !== 1) throw Error('Expected one app project');
   const projectFile = path.join('ios', projects[0], 'project.pbxproj');
   const project = xcode.project(projectFile); project.parseSync();
-  configure(project, settings, 100000 + Number(process.env.GITHUB_RUN_NUMBER));
+  const buildNumber = 100000 + Number(process.env.GITHUB_RUN_NUMBER);
+  configure(project, settings, buildNumber);
   fs.writeFileSync(projectFile, project.writeSync());
   const appFolder = path.join('ios', projects[0].replace('.xcodeproj', ''));
+  setBundleBuildNumbers([path.join(appFolder, 'Info.plist'), path.join('ios', 'JourneyDeckWatch', 'Info.plist')], buildNumber);
   const expoPlist = path.join(appFolder, 'Supporting/Expo.plist');
   const updates = plist.parse(fs.readFileSync(expoPlist, 'utf8'));
   if (updates.EXUpdatesRuntimeVersion !== '3.0.0-preview.3') throw Error('Unexpected native runtime; do not build an OTA compatibility binary');
   updates.EXUpdatesRequestHeaders = { ...updates.EXUpdatesRequestHeaders, 'expo-channel-name': 'v3-preview' };
   fs.writeFileSync(expoPlist, plist.build(updates));
 }
-module.exports = { configure };
+module.exports = { configure, setBundleBuildNumbers };

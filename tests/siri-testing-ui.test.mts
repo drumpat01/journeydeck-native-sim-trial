@@ -34,7 +34,7 @@ async function screen(available = true) {
   const button = (id: string) => tree.root.findAllByType('Button').find((b: any) => b.props.testID === id);
   return { tree, button, runs: () => runs, cancellations: () => cancellations,
     click: async (id: string) => { await act(() => button(id).props.onPress()); },
-    finish: async () => { await act(async () => resolve({ status: 'passed', detail: 'Late result', question: 'Sample', elapsedMs: 25 })); },
+    finish: async (result = { status: 'passed', detail: 'Late result', question: 'Sample', elapsedMs: 25 } as any) => { await act(async () => resolve(result)); },
     background: async () => { await act(() => { native.currentState = 'background'; listener('background'); }); },
     text: () => tree.root.findAllByType('Text').map((t: any) => t.children.join('')).join('|'),
     close: async () => { await act(() => tree.unmount()); },
@@ -58,4 +58,19 @@ test('backgrounding clears transient results and prevents late updates', async (
   const s = await screen();
   try { await s.click('siri-smoke'); await s.background(); await s.finish(); assert.equal(s.runs(), 1); assert.doesNotMatch(s.text(), /Late result/); }
   finally { await s.close(); }
+});
+
+test('failed synthetic queries show generated and expected plans and clear on background', async () => {
+  const s = await screen();
+  try {
+    await s.click('siri-smoke');
+    await s.finish({ status: 'failed', detail: 'invalid plan: metric is not supported for domain music',
+      question: 'Synthetic music count', proposedPlan: { domain: 'music', metric: 'songPlays' },
+      expectedPlan: { domain: 'music', metric: 'count' }, elapsedMs: 4100 });
+    assert.equal(s.runs(), 13);
+    assert.match(s.text(), /Generated query: .*songPlays/);
+    assert.match(s.text(), /Expected query: .*count/);
+    await s.background();
+    assert.doesNotMatch(s.text(), /songPlays|Synthetic music count/);
+  } finally { await s.close(); }
 });

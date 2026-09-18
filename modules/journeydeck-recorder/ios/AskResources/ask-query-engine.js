@@ -25,28 +25,31 @@
   const unavailable = () => reply('unavailable', 'Some local history could not be read completely. Open JourneyDeck and try again.');
   const finite = n => typeof n === 'number' && Number.isFinite(n) && n >= 0;
   const textFilter = s => typeof s === 'string' && s.length <= 160 && !/[\x00-\x1f]/.test(s);
-  function validate(raw) {
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-    if (Object.keys(raw).some(k => !Object.prototype.hasOwnProperty.call(defaults, k))) return null;
+  function validate(raw, issues) {
+    const fail = reason => { if (issues) issues.push(reason); return null; };
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return fail('plan must be an object');
+    if (Object.keys(raw).some(k => !Object.prototype.hasOwnProperty.call(defaults, k))) return fail('unknown plan field');
     const p = Object.assign({}, defaults, raw);
-    if (p.version !== 1 || Object.entries(choices).some(([k, values]) => !values.includes(p[k]))) return null;
-    if (!['none', 'today', 'yesterday', 'thisWeek', 'lastWeek', 'thisMonth', 'lastMonth', 'thisYear', 'lastYear'].includes(p.comparePeriod)) return null;
-    if (!Number.isInteger(p.days) || p.days < 0 || p.days > 999 || !Number.isInteger(p.limit) || p.limit < 1 || p.limit > 20) return null;
-    if (!['artist', 'track', 'album', 'place', 'startDate', 'endDate'].every(k => textFilter(p[k]))) return null;
-    if (!finite(p.minMiles) || !finite(p.maxMiles) || p.minMiles > 100000 || p.maxMiles > 100000 || (p.maxMiles && p.maxMiles < p.minMiles)) return null;
-    if ((p.operation === 'compare') !== (p.comparePeriod !== 'none')) return null;
-    if ((p.operation === 'rank') !== (p.groupBy !== 'none')) return null;
+    if (p.version !== 1) return fail('unsupported plan version');
+    for (const [key, values] of Object.entries(choices)) if (!values.includes(p[key])) return fail('invalid ' + key);
+    if (!['none', 'today', 'yesterday', 'thisWeek', 'lastWeek', 'thisMonth', 'lastMonth', 'thisYear', 'lastYear'].includes(p.comparePeriod)) return fail('invalid comparePeriod');
+    if (!Number.isInteger(p.days) || p.days < 0 || p.days > 999) return fail('days must be an integer from 0 to 999');
+    if (!Number.isInteger(p.limit) || p.limit < 1 || p.limit > 20) return fail('limit must be an integer from 1 to 20');
+    for (const key of ['artist', 'track', 'album', 'place', 'startDate', 'endDate']) if (!textFilter(p[key])) return fail('invalid text field: ' + key);
+    if (!finite(p.minMiles) || !finite(p.maxMiles) || p.minMiles > 100000 || p.maxMiles > 100000 || (p.maxMiles && p.maxMiles < p.minMiles)) return fail('invalid mileage bounds');
+    if ((p.operation === 'compare') !== (p.comparePeriod !== 'none')) return fail('compare requires comparePeriod; other operations require none');
+    if ((p.operation === 'rank') !== (p.groupBy !== 'none')) return fail('rank requires groupBy; other operations require none');
     const metrics = { journeys: ['count', 'miles', 'minutes', 'songPlays'], music: ['count'],
       memories: ['count', 'photos'], markers: ['count', 'photos', 'voiceMemos'], places: ['count'] };
-    if (!metrics[p.domain].includes(p.metric)) return null;
-    if (['largest', 'smallest', 'average'].includes(p.operation) && p.metric === 'count') return null;
-    if (['artist', 'track', 'album'].includes(p.groupBy) && p.domain !== 'music') return null;
-    if (p.groupBy === 'place' && p.domain !== 'places') return null;
-    if (p.operation === 'rank' && p.selection === 'previous') return null;
-    if ((p.period === 'lastDays') !== (p.days > 0)) return null;
-    if (p.period !== 'date' && p.period !== 'between' && (p.startDate || p.endDate)) return null;
-    if (p.period === 'date' && p.endDate) return null;
-    if (p.domain === 'memories' && (p.dayType !== 'all' || p.timeOfDay !== 'all' || p.minMiles || p.maxMiles || p.place || p.artist || p.track || p.album)) return null;
+    if (!metrics[p.domain].includes(p.metric)) return fail('metric is not supported for domain ' + p.domain);
+    if (['largest', 'smallest', 'average'].includes(p.operation) && p.metric === 'count') return fail('numeric metric required for largest/smallest/average');
+    if (['artist', 'track', 'album'].includes(p.groupBy) && p.domain !== 'music') return fail('music grouping requires music domain');
+    if (p.groupBy === 'place' && p.domain !== 'places') return fail('place grouping requires places domain');
+    if (p.operation === 'rank' && p.selection === 'previous') return fail('rank cannot use previous selection');
+    if ((p.period === 'lastDays') !== (p.days > 0)) return fail('lastDays requires positive days; other periods require zero');
+    if (p.period !== 'date' && p.period !== 'between' && (p.startDate || p.endDate)) return fail('date fields require date or between period');
+    if (p.period === 'date' && p.endDate) return fail('single date requires empty endDate');
+    if (p.domain === 'memories' && (p.dayType !== 'all' || p.timeOfDay !== 'all' || p.minMiles || p.maxMiles || p.place || p.artist || p.track || p.album)) return fail('unsupported Memory filter');
     return p;
   }
   function localDate(s) {

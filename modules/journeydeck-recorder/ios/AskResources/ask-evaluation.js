@@ -58,10 +58,11 @@
     return item ? { question: item.question, now: fixture().now, context: null } : null;
   }
   function grade(id, raw) {
-    const item = cases.find(c => c.id === id), actual = engine.validate(raw);
+    const validationErrors = [];
+    const item = cases.find(c => c.id === id), actual = engine.validate(raw, validationErrors);
     if (!item) return { status: 'failed', detail: 'Unknown evaluation case.' };
     const expected = engine.validate(item.plan), differences = [];
-    if (!actual) differences.push('invalid plan');
+    if (!actual) differences.push('invalid plan: ' + validationErrors.join('; '));
     else if (expected.decision !== 'answer') {
       if (actual.decision === 'answer') differences.push('unsupported question was answered');
     } else for (const key of Object.keys(expected)) {
@@ -73,7 +74,8 @@
       for (const [key, value] of Object.entries(item.facts)) if (JSON.stringify(answer.facts && answer.facts[key]) !== JSON.stringify(value)) differences.push('wrong fact: ' + key);
     } else if (answer.status === 'answered') differences.push('unsafe answer');
     return { status: differences.length ? 'failed' : 'passed', question: item.question,
-      detail: differences.join('; ') || 'Plan and calculated facts match.', plan: actual, answer: answer.text };
+      detail: differences.join('; ') || 'Plan and calculated facts match.', plan: actual,
+      proposedPlan: raw, expectedPlan: expected, validationErrors, answer: answer.text };
   }
   const api = { fixture, cases, list, prepare, grade };
   if (typeof module !== 'undefined') module.exports = api;

@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 const require = createRequire(import.meta.url);
-const { configure } = require('../scripts/configure-ios-device-build.cjs');
+const { configure, setBundleBuildNumbers } = require('../scripts/configure-ios-device-build.cjs');
+const plist = require('@expo/plist').default;
 
 test('manual signing assigns app and Watch their own profiles without touching Pods', () => {
   const objects: any = { PBXNativeTarget: {}, XCConfigurationList: {}, XCBuildConfiguration: {} };
@@ -17,6 +20,15 @@ test('manual signing assigns app and Watch their own profiles without touching P
   assert.equal(objects.XCBuildConfiguration.watchrelease.buildSettings.PROVISIONING_PROFILE_SPECIFIER, 'watch-profile');
   assert.equal(objects.XCBuildConfiguration.watchrelease.buildSettings.CURRENT_PROJECT_VERSION, '100012');
   assert.equal(objects.XCBuildConfiguration.podrelease.buildSettings.CODE_SIGN_STYLE, undefined);
+});
+test('device build stamps a monotonically higher build number into app and Watch plists', () => {
+  const folder = mkdtempSync(join(tmpdir(), 'journeydeck-build-number-'));
+  const files = ['App.plist', 'Watch.plist'].map(name => join(folder, name));
+  try {
+    for (const file of files) writeFileSync(file, plist.build({ CFBundleIdentifier: 'example', CFBundleVersion: '1' }));
+    setBundleBuildNumbers(files, 100004);
+    for (const file of files) assert.equal(plist.parse(readFileSync(file, 'utf8')).CFBundleVersion, '100004');
+  } finally { rmSync(folder, { recursive: true }); }
 });
 test('device workflow is manual, public standard runner only, and exports only an encrypted artifact', () => {
   // Source safety contract, not a claim the Xcode workflow has run.
